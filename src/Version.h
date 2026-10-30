@@ -17,7 +17,7 @@
    not start with punctuation. RELEASES.md must carry the same revision and
    .plan/tools/check-release-version.py enforces that. */
 #ifndef VER_QUALIFIER
-#define VER_QUALIFIER Q1
+#define VER_QUALIFIER Q2
 #endif
 
 // this is sth. like "3.5"
