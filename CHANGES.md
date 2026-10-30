@@ -582,6 +582,45 @@ Light 主题下差别看着不明显是因为 `#f2f2f2` 与系统灰 `#f0f0f0` �
 ⇒ 读数是空串、比较恒成立，又是一枚**恒真的假判据**，已删，交给上面那枚三态门禁。
 另一条 PowerShell 坑：函数里 `Write-Output` 的说明文字会**混进返回值**（拿到的是数组），要用 `Write-Host`。
 
+### 42. 选项页颜色的第二轮：底色改用页面色，并纠正我一枚凭空发明的判据
+
+用户反馈：Light 主题下"有灰色和白色"很异常，要的是**标题栏灰、非标题栏白**，并点名参照
+「设置 → 更改语言」那个窗口（连按钮也参考它）。
+
+先去看参照物到底是什么：`IDD_DIALOG_CHANGE_LANGUAGE`（`src/SumatraPDF.rc:143`）是**标准 Win32 对话框**，
+`Dialog_ChangeLanguage_Proc` 在 `WM_INITDIALOG` 里只做 `DarkMode::setDarkWndSafe(hDlg)`（暗色时），
+其余全是系统默认画：按钮是普通 `IDOK/IDCANCEL` push button，列表框自己白底。
+⇒ 可借鉴的三点都已成立：**我们没画自己的标题栏**（DWM 画，所以就是系统灰）、
+**按钮是普通 BS_PUSHBUTTON**（与它同一套）、**内容区应当是干净的白**。
+
+上一轮我用的 `ThemeMainWindowBackgroundColor()` 是"PDF 外围那层"（Light 下 `#f2f2f2`，
+与系统灰几乎同档）——所以整页发灰、和白色控件混在一起，正是用户看到的那个"异常"。
+现在换成应用的页面色：
+
+```c
+sp->textCol = ThemeDocumentColors(sp->bgCol);   // FixedPageUI 的 BackgroundColor / TextColor
+```
+
+`ThemeDocumentColors()`（`src/Theme.cpp:300`）一次给出**底 + 字**这一对，且两个都由设置项控制。
+实测三态（`.plan/tools/test-options-theme-colors.ps1`，起三次真程序读日志）：
+
+| 态 | 底 | 字 | 亮度差 |
+| --- | --- | --- | --- |
+| Light 默认 | `#ffffff` | `#000000` | 255 |
+| `FixedPageUI.BackgroundColor = #ff00aa / TextColor = #ffffff` | `#ff00aa` | `#ffffff` | 159 |
+| `Theme = Dark` | `#ffffff` | `#000000` | 255 |
+
+**同时删掉我自己凭空发明的一条判据**：上一版门禁里有"Dark 主题下必须是暗底（亮度 <128）"和
+"C ≠ A"两条。量完才发现应用的 Dark 主题**不改页面色**（PDF 仍白底黑字，除非用户自己设
+`FixedPageUI`），所以那两条与参照物自己的约定冲突——是我想当然。换成真不变量：
+**每一态底色与文字色的亮度差必须 ≥64**（可读性），三态都量。
+⇒ 现在的行为是：Dark 主题下选项页仍是白底黑字（跟页面一致、可读）。若你要的是"暗色主题下选项页也变暗"，
+一行就能换回 `ThemeWindowBackgroundColor()/ThemeWindowTextColor()`，但那样底色就不再等于页面色——
+两者只能选一个，我按你这次的话选了页面色。
+
+按钮不额外画色：参照物的按钮就是系统画的普通按钮，我们一样（`WM_CTLCOLORBTN` 只影响勾选框那侧的
+背景填充，让它在自定义底色上不留旧灰）。
+
 ## 已知未完成（不是缺陷清单，是下一轮的活）
 6. ~~关于页「邱宗满」能否出墨~~ **已验收**（用户 2026-10-30 目测：正常）。Arial Black 本身无中日韩字形，实测由 GDI 字体链接画出；我的离屏探针两次不可信，已记入原因，不要再为此改那行字体。
 

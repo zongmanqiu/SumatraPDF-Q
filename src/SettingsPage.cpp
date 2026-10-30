@@ -349,8 +349,11 @@ static LRESULT CALLBACK PageProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     switch (msg) {
         case WM_CREATE: {
             sp->hwnd = hwnd;
-            sp->bgCol = ThemeMainWindowBackgroundColor();
-            sp->textCol = ThemeWindowTextColor();
+            // the same pair the document area paints with: FixedPageUI
+            // BackgroundColor / TextColor (white + black in Light, dark + light in
+            // Dark). The caption stays whatever DWM draws, and the buttons are
+            // ordinary BS_PUSHBUTTON like the Change Language dialog's.
+            sp->textCol = ThemeDocumentColors(sp->bgCol);
             sp->bgBrush = CreateSolidBrush(sp->bgCol);
             logf("SettingsPage: bg=#%02x%02x%02x text=#%02x%02x%02x\n", GetRValue(sp->bgCol),
                  GetGValue(sp->bgCol), GetBValue(sp->bgCol), GetRValue(sp->textCol), GetGValue(sp->textCol),
