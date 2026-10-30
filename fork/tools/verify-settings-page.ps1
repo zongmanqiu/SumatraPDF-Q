@@ -32,7 +32,7 @@ public class U32 {
 # DERIVE: repo root = three levels up from fork/tools
 $ROOT = (Get-Item (Join-Path $PSScriptRoot "..\..\..")).FullName
 $T = "$ROOT\.temp\m04t"
-$EXE = "$ROOT\.main\out\rel64\SumatraPDF.exe"
+$EXE = "$ROOT\.main\upstream\out\rel64\SumatraPDF.exe"
 $CAJ = "$ROOT\.ex\儿童青少年期内外化问题的共发及亲子关系和友谊质量的影响.caj"
 $SET = Join-Path $T "SumatraPDF-settings.txt"
 $WM_COMMAND = 0x0111; $BM_CLICK = 0x00F5; $BM_GETCHECK = 0x00F0; $WM_CLOSE = 0x0010

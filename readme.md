@@ -37,7 +37,8 @@
 
 ## 文档
 
-改版自己的文件都收在 [fork/](fork/) 里，与官方上游文件分开：
+改版自己的文件都收在 [fork/](fork/) 里；官方上游的原样代码树在 [upstream/](upstream/)，
+根目录不与上游文件混放：
 
 - [fork/HISTORY.md](fork/HISTORY.md) — 版本历史（给人看的）
 - [fork/MODIFICATIONS.md](fork/MODIFICATIONS.md) — 相对官方基线改了哪些文件（与 git 实际结果机器互校）

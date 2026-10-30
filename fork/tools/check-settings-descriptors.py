@@ -12,8 +12,8 @@ import re
 import sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
-SETTINGS = os.path.join(ROOT, ".main", "src", "Settings.h")
-PAGE = os.path.join(ROOT, ".main", "src", "SettingsPage.cpp")
+SETTINGS = os.path.join(ROOT, ".main", "upstream", "src", "Settings.h")
+PAGE = os.path.join(ROOT, ".main", "upstream", "src", "SettingsPage.cpp")
 
 STRINGISH = {"String", "Color"}
 NUMERIC = {"Int", "Float"}

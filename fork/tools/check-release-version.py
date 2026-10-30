@@ -15,7 +15,7 @@ import re
 import sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
-VERSION_H = os.path.join(ROOT, ".main", "src", "Version.h")
+VERSION_H = os.path.join(ROOT, ".main", "upstream", "src", "Version.h")
 HISTORY = os.path.join(ROOT, ".main", "fork", "HISTORY.md")
 README = os.path.join(ROOT, ".main", "readme.md")
 

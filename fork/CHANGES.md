@@ -631,6 +631,24 @@ sp->textCol = ThemeDocumentColors(sp->bgCol);   // FixedPageUI 的 BackgroundCol
 - 文档交叉链接同步改指 `fork/...`；`readme.md` 增加「文档」一节索引这批文件。
 - `.plan/`（m00–m12 计划文档）**有意留在仓库外**：里面是本机路径和开发过程笔记，不是交付物。
 
+### 44. 上游代码树整体收进 `upstream/`，根目录只剩 `readme.md` + `fork/`
+
+用户追加了上一条的要求：光挪我们的文档还不够，**官方文件本体也要收进一个文件夹**，
+外面只放我们的 readme 等，两边才真正不混。
+
+- 6069 个上游跟踪文件 `git mv` 进 **`upstream/`**（纯移动 R100，git 相似度 100%，历史可追）；
+  未跟踪的构建产物 `out/`（含 cajshim 的 Rust 静态库，1.9 GB）一并文件系统搬移——
+  `.gitignore` 的 `out/` 规则在任意深度生效，`upstream/out` 仍被忽略。
+- **为什么整树平移不破坏构建**：`OutDir=$(ProjectDir)..\out\`、cajshim.lib 在 `..\out\cajshim\release`、
+  premake/工程内部全是相对路径——树内部结构不变，全部自洽；构建脚本 `cd` 到
+  `.main\upstream` 后 msbuild 一次通过（须重编：obj 里记的是绝对路径，挪动后增量失效）。
+- 门禁连动：py/ps1 的 exe 与源码路径加 `upstream/` 段；`diff-vs-baseline.py` 两处重写——
+  ① 6069 个 R100 重命名不算偏离（挪动+修改的文件是 R<100，照样进账）；
+  ② `diff -rq` 的两根对不齐了，改成按基线清单逐文件 `filecmp`（`ls-tree -z` 绕开
+  非 ASCII 文件名被八进制引号包住的坑；git blob 哈希对不了——checkout 行尾归一化是噪音）。
+  修正后交叉比对读数 = 16 处内容差异 + readme.md 被替换（missing）= 与 17 项偏离账严格相等。
+- MODIFICATIONS.md 的路径口径注明：表内是**基线相对路径**，仓库里位于 `upstream/` 下。
+
 ## 已知未完成（不是缺陷清单，是下一轮的活）
 6. ~~关于页「邱宗满」能否出墨~~ **已验收**（用户 2026-10-30 目测：正常）。Arial Black 本身无中日韩字形，实测由 GDI 字体链接画出；我的离屏探针两次不可信，已记入原因，不要再为此改那行字体。
 

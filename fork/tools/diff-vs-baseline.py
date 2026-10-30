@@ -9,6 +9,7 @@ import subprocess
 import sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
+TREE = os.path.join(ROOT, ".main", "upstream")
 MAIN = os.path.join(ROOT, ".main")
 BASELINE = os.path.join(ROOT, ".3rd", "sumatrapdf-3.6.1rel")
 TREE_FILE = os.path.join(ROOT, ".main", "fork", "baseline-tree.txt")
@@ -29,14 +30,23 @@ tree = open(TREE_FILE, encoding="utf-8").read().strip()
 #    Files created after the last commit are still untracked, so they are
 #    merged in from git status below: a list that depends on staging order is a
 #    list that silently misses something.
+#    m13b: the whole upstream tree lives in upstream/, so git reports paths with
+#    that prefix; strip it so every list below speaks baseline-relative paths.
+#    A pure move is R100 (identical content) and must NOT count as a deviation;
+#    a file we both moved and edited shows R<100 and lands in `changed`.
 raw = git("diff", "--name-status", tree)
 changed = {}
 added = []
+prefix = "upstream/"
 for line in raw.splitlines():
     parts = line.split("	")
     if len(parts) < 2:
         continue
     status, path = parts[0], parts[-1]
+    if path.startswith(prefix):
+        path = path[len(prefix):]
+    if status.startswith("R100"):
+        continue
     if status.startswith("A"):
         added.append(path)
     else:
@@ -44,19 +54,36 @@ for line in raw.splitlines():
 
 # 2b. new files not committed yet (untracked, minus gitignored build output)
 for l in git("status", "--porcelain", "-uall").splitlines():
-    if l.startswith("??") and not l[3:].startswith("out/"):
-        added.append(l[3:].rstrip("/"))
+    p = l[3:].rstrip("/")
+    if l.startswith("??") and not p.startswith("out/") and not p.startswith("upstream/out/"):
+        if p.startswith(prefix):
+            p = p[len(prefix):]
+        added.append(p)
 added = sorted(set(added))
 
-# 3. belt and braces: the read-only pristine copy must agree with the tree object
+# 3. belt and braces: the read-only pristine copy must agree with the tree object.
+#    m13b: the tree now lives under upstream/, so the two roots no longer align
+#    for `diff -rq`; compare path by path from the baseline listing instead.
+#    -z because some svg names contain non-ASCII that git would octal-quote.
 if os.path.isdir(BASELINE):
-    r = subprocess.run(["diff", "-rq", "--exclude=.git", "--exclude=out",
-                        "--exclude=caj-cache", BASELINE, MAIN],
-                       capture_output=True, text=True, encoding="utf-8", errors="replace")
-    only_in_main = [l for l in r.stdout.splitlines() if "Only in " + MAIN.replace("\\", "\\\\") in l
-                    and "cajshim" not in l and "Cargo.lock" not in l]
-    differing = [l for l in r.stdout.splitlines() if l.startswith("Files ")]
-    print(f"[cross-check] differing upstream files: {len(differing)}   extra files: {len(only_in_main)}")
+    import filecmp
+    ls = git("ls-tree", "-r", "--name-only", "-z", tree).split("\0")
+    differ = []
+    missing = []
+    for p in ls:
+        if not p:
+            continue
+        rel = p.split("/")
+        a = os.path.join(BASELINE, *rel)
+        b = os.path.join(TREE, *rel)
+        if not os.path.isfile(b):
+            missing.append(p)
+            continue
+        if not filecmp.cmp(a, b, shallow=False):
+            differ.append(p)
+    print(f"[cross-check] baseline copy vs upstream/: differing {len(differ)}   missing {len(missing)}")
+    for p in missing:
+        print("  missing:", p)
 
 print(f"\n=== 改动的上游文件：{len(changed)} ===")
 for p in sorted(changed):
