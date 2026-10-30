@@ -44,7 +44,7 @@ BEGIN
     BEGIN
         BLOCK "040904E4"
         BEGIN
-            VALUE "FileDescription", kAppName
+            VALUE "FileDescription", kAppDisplayName
             VALUE "FileVersion", VER_RESOURCE_STR
             VALUE "LegalCopyright", kCopyrightStr
             VALUE "ProductName", kAppName

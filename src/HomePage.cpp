@@ -99,6 +99,11 @@ static AboutLayoutInfoEl gAboutLayoutInfo[] = {
     {"forums", "SumatraPDF forums", "https://github.com/sumatrapdfreader/sumatrapdf/discussions"},
     {"programming", "The Programmers", "https://github.com/sumatrapdfreader/sumatrapdf/blob/master/AUTHORS"},
     {"licenses", "Various Open Source", "https://github.com/sumatrapdfreader/sumatrapdf/blob/master/AUTHORS"},
+    /* fork identity. One AboutLayoutInfoEl carries one url, so the two repos
+       cannot share a row: Gitee is the source, GitHub the auto-synced mirror. */
+    {"author", "邱宗满", nullptr},
+    {"repository", "Gitee", "https://gitee.com/qiuzongman/SumatraPDF-Q"},
+    {"mirror", "GitHub", "https://github.com/zongmanqiu/SumatraPDF-Q"},
 #if defined(GIT_COMMIT_ID_STR)
     {"last change", "git commit " GIT_COMMIT_ID_STR,
      "https://github.com/sumatrapdfreader/sumatrapdf/commit/" GIT_COMMIT_ID_STR},

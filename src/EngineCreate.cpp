@@ -36,6 +36,8 @@ bool IsSupportedFileType(Kind kind, bool enableEngineEbooks) {
         return true;
     } else if (IsEnginePsSupportedFileType(kind)) {
         return true;
+    } else if (IsEngineCajSupportedFileType(kind)) {
+        return true;
     }
 
     if (!enableEngineEbooks) {
@@ -96,6 +98,10 @@ static EngineBase* CreateEngineForKind(Kind kind, const char* path, PasswordUI* 
     }
     if (IsEnginePsSupportedFileType(kind)) {
         engine = CreateEnginePsFromFile(path);
+        return engine;
+    }
+    if (IsEngineCajSupportedFileType(kind)) {
+        engine = CreateEngineCajFromFile(path, pwdUI);
         return engine;
     }
     if (enableChmEngine && (kind == kindFileChm)) {

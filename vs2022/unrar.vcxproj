@@ -996,7 +996,10 @@
     <ClCompile Include="..\ext\unrar\archive.cpp" />
     <ClCompile Include="..\ext\unrar\arcread.cpp" />
     <ClCompile Include="..\ext\unrar\blake2s.cpp" />
-    <ClCompile Include="..\ext\unrar\cmddata.cpp" />
+    <!-- KissPDF: this vendored file ends a // comment with byte 0xFE, a GBK lead byte that swallows the newline and merges the next line into the comment (C2065). Pin the source charset. -->
+    <ClCompile Include="..\ext\unrar\cmddata.cpp">
+      <AdditionalOptions>/source-charset:.1252 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
     <ClCompile Include="..\ext\unrar\consio.cpp" />
     <ClCompile Include="..\ext\unrar\crc.cpp" />
     <ClCompile Include="..\ext\unrar\crypt.cpp" />

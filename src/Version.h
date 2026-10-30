@@ -55,3 +55,10 @@
 #define kPublisherStr      "Krzysztof Kowalczyk"
 
 #define kAppName        "SumatraPDF"
+
+/* Our fork's user-visible name: window titles, the shipped file name and the
+   task-manager friendly name (.rc FileDescription). Everything below kAppName
+   stays on the original name: registry keys, uninstall string, AppData folder,
+   StartMenu link, window class. */
+#define kAppDisplayName  "SumatraPDF-Q"
+#define kAppDisplayNameW L"SumatraPDF-Q"

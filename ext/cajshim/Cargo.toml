@@ -1,0 +1,21 @@
+[package]
+name = "cajshim"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "KissPDF: thin extern-C shim over caj2pdf-core (CAJ -> PDF, in-process)"
+
+[lib]
+name = "cajshim"
+crate-type = ["staticlib"]
+path = "src/lib.rs"
+
+[dependencies]
+caj2pdf-core = "0.8.1"
+
+[profile.release]
+opt-level = 2
+lto = "thin"
+codegen-units = 16
+panic = "unwind"
+strip = false

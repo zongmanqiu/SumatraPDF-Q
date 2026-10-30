@@ -13,6 +13,10 @@ bool IsEngineDjVuSupportedFileType(Kind kind);
 EngineBase* CreateEngineDjVuFromFile(const char* path);
 EngineBase* CreateEngineDjVuFromStream(IStream* stream);
 
+/* EngineCaj.cpp */
+bool IsEngineCajSupportedFileType(Kind kind);
+EngineBase* CreateEngineCajFromFile(const char* path, PasswordUI* pwdUI);
+
 /* EngineEbook.cpp */
 EngineBase* CreateEngineEpubFromFile(const char* fileName);
 EngineBase* CreateEngineEpubFromStream(IStream* stream);

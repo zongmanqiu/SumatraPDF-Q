@@ -77,6 +77,7 @@
 #include "StressTesting.h"
 #include "HomePage.h"
 #include "SumatraDialogs.h"
+#include "SettingsPage.h"
 #include "SumatraProperties.h"
 #include "TableOfContents.h"
 #include "Tabs.h"
@@ -95,8 +96,8 @@
 
 constexpr const char* kRestrictionsFileName = "sumatrapdfrestrict.ini";
 
-constexpr const char* kSumatraWindowTitle = "SumatraPDF";
-constexpr const WCHAR* kSumatraWindowTitleW = L"SumatraPDF";
+constexpr const char* kSumatraWindowTitle = kAppDisplayName;
+constexpr const WCHAR* kSumatraWindowTitleW = kAppDisplayNameW;
 
 // used to show it in debug, but is not very useful,
 // so always disable
@@ -3478,6 +3479,9 @@ static TempWStr GetFileFilterTemp() {
         {_TRA("PDF documents"), "*.pdf", true},
         {_TRA("XPS documents"), "*.xps;*.oxps", true},
         {_TRA("DjVu documents"), "*.djvu", true},
+#ifdef ENABLE_CAJ
+        {_TRA("CAJ documents"), "*.caj", true},
+#endif
         {_TRA("Postscript documents"), "*.ps;*.eps", IsEnginePsAvailable()},
         {_TRA("Comic books"), "*.cbz;*.cbr;*.cb7;*.cbt", true},
         {_TRA("CHM documents"), "*.chm", true},
@@ -3876,7 +3880,7 @@ static void ShowOptionsDialog(HWND hwnd) {
         return;
     }
 
-    if (IDOK != Dialog_Settings(hwnd, gGlobalPrefs)) {
+    if (IDOK != ShowSettingsPageDialog(hwnd)) {
         return;
     }
 

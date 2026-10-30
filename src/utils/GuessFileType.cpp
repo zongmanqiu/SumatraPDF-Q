@@ -14,6 +14,7 @@ Kind kindFilePDF = "filePDF";
 Kind kindFilePS = "filePS";
 Kind kindFileXps = "fileXPS";
 Kind kindFileDjVu = "fileDjVu";
+Kind kindFileCaj = "fileCaj";
 Kind kindFileChm = "fileChm";
 Kind kindFilePng = "filePng";
 Kind kindFileJpeg = "fileJpeg";
@@ -104,6 +105,7 @@ Kind kindFileAvif = "fileAvif";
     V(".xhtml", kindFileHTML)     \
     V(".svg", kindFileSvg)        \
     V(".djvu", kindFileDjVu)      \
+    V(".caj", kindFileCaj)        \
     V(".jp2", kindFileJp2)        \
     V(".j2k", kindFileJp2)        \
     V(".jpx", kindFileJp2)        \
@@ -189,7 +191,8 @@ int KindIndexOf(Kind* kinds, int nKinds, Kind kind) {
     V(0, "II\xBC\x01", kindFileJxr)                     \
     V(0, "II\xBC\x00", kindFileJxr)                     \
     V(0, "\0\0\0\x0CjP  \x0D\x0A\x87\x0A", kindFileJp2) \
-    V(0, "AT&T", kindFileDjVu)
+    V(0, "AT&T", kindFileDjVu)                       \
+    V(0, "CAJ\x00", kindFileCaj)
 
 // a file signaure is a sequence of bytes at a specific
 // offset in the file
