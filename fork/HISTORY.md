@@ -10,7 +10,7 @@
 > commit `16c59fde8`），`Q1 / Q2 / …` 是 SumatraPDF-Q 自己的修订序号——我们在同一个官方
 > 基线上反复修改，靠它区分先后。写进代码的那一处是 `src/Version.h` 的 `VER_QUALIFIER`
 > （上游专为重编译器留的钩子），本文件、`readme.md` 与它三处必须一致，由
-> `.plan/tools/check-release-version.py` 判等。
+> `fork/tools/check-release-version.py` 判等。
 
 ---
 
@@ -98,7 +98,7 @@
 - **转换过程被强杀或磁盘写满**，可能留下半个缓存文件并被后续打开一直命中，
   该文件从此打不开。临时办法同样是删掉 `caj-cache/` 里的同名 `.pdf`。
 - 以上三条与其他审计发现（缓存清单可被路径穿越、跨进程无锁、构建配置未纳入 premake）
-  的完整记录见 `CHANGES.md` 与开发侧的 `.plan/m11-source-risk.md`。
+  的完整记录见 `CHANGES.md`（开发侧另有不入库的笔记）。
 
 ---
 

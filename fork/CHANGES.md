@@ -1,7 +1,7 @@
 # CHANGES · 我们对 SumatraPDF 3.6.1 的全部修改
 
 基线：GitHub tag `3.6.1rel`（commit `16c59fde8`），`CURR_VERSION 3.6.1`。
-基线快照的 git tree：`0899981cbf84be2f59999e370f86c737f2d3565f`（见 `.plan/baseline-tree.txt`）。
+基线快照的 git tree：`0899981cbf84be2f59999e370f86c737f2d3565f`（见 `fork/baseline-tree.txt`）。
 对账：`git diff 0899981c -- .`（基线 commit 补上后）或 `diff -rq ../.3rd/sumatrapdf-3.6.1rel .`
 
 规则：一处偏离一条。**坐标写符号名，不写行号**（行号会随注释漂移，且没有门禁读它）。每条都要能单独撤销。
@@ -163,7 +163,7 @@ caj-cache\<原文件名>.pdf                 名字就是源文件换后缀；�
 
 这轮 9 项：`UseTabs`、`RestoreSession`、`RememberOpenedFiles`、`ReuseInstance`、`FullPathInTitle`、`SmoothScroll`、`RememberStatePerDocument`、`ReloadModifiedDocuments`、`LazyLoading`。
 
-实测（`.plan/tools/verify-settings-page.ps1`，PASS）：9 标签 / 9 勾选框 / 0 编辑框 / 2 按钮；20 个控件两两零重叠；最底控件底边 667 ≤ 窗口底边 687；`measured labelDx=186` 与「标签控件最大宽 186」两个读数相等 ⇒ 没有文字被截；改 UseTabs → 确定 → 只有那一行变化，取消 → 文件不动。
+实测（`fork/tools/verify-settings-page.ps1`，PASS）：9 标签 / 9 勾选框 / 0 编辑框 / 2 按钮；20 个控件两两零重叠；最底控件底边 667 ≤ 窗口底边 687；`measured labelDx=186` 与「标签控件最大宽 186」两个读数相等 ⇒ 没有文字被截；改 UseTabs → 确定 → 只有那一行变化，取消 → 文件不动。
 
 **顺手修的却是脚本自己的缺陷**：打印窗口尺寸那行写成 `$(($dr[2]-$dr[0]))x(($dr[3]-$dr[1]))`，PowerShell 把 `$dr[3]-$dr[1]` 当成变量减法的切片解析，输出的是表达式原文而不是数字 —— 高度那一格从来没读到过。改成先赋 `$dlgW`/`dlgH` 再插值。**读数量具自己把读数吐成乱码，比产品出错更危险**：它看起来是绿的。
 
@@ -181,7 +181,7 @@ caj-cache\<原文件名>.pdf                 名字就是源文件换后缀；�
 
 ### 12c. 验证
 
-`.plan/tools/verify-settings-page.ps1`（起真程序、真点、真存盘）现在断言四件事，全 PASS：
+`fork/tools/verify-settings-page.ps1`（起真程序、真点、真存盘）现在断言四件事，全 PASS：
 
 - 结构断言 `标签数 == 勾选框 + 编辑框 + 下拉`（当前读数：9 = 9 + 0 + 0，另有 2 个按钮），另断言标签数不少于 8，防止表被删坏；
 - **控件两两矩形零重叠**（当前 20 个控件；这条是「不丑」的可机检替身）；
@@ -215,7 +215,7 @@ caj-cache\<原文件名>.pdf                 名字就是源文件换后缀；�
 - 可增长的字符串是 `str::Str`（`AppendFmt` / `AsByteSlice` / `StealData`），**不是**全局那个 `Str`；`LendData()` 是借出不是交出所有权（在 m08 里已经因此崩过一次）。
 - 数字解析用 `ParseInt(s)` 和 `str::Parse(s, "%f", &v)`，没有 `str::ToInt` / `str::ToFloat`。
 
-### 16. 验证方式（两份，都在 `.plan/tools/`）
+### 16. 验证方式（两份，都在 `fork/tools/`）
 
 - **文本门禁** `check-settings-descriptors.py`：解析 `Settings.h` 的名字串与字段表，逐行核对 descriptor 的名字存在、类型与控件匹配。**一秒，不需要编译**。它第一跑就翻红抓到 `GradientColors` 其实是 `ColorArray`（数组不进页面，已删）。
 - **端到端** `verify-settings-page.ps1`：见 12c。
@@ -262,7 +262,7 @@ VALUE "CompanyName",     kPublisherStr       // 保持 Krzysztof Kowalczyk
 
 ### 20. 文件名：不改构建目标名，发布时改名（`SumatraPDF-Q.exe`）
 
-没有在 `.vcxproj` 里设 `TargetName`。理由是实测过的连带面：`out/rel64/SumatraPDF.exe` 这个名字被 `.plan/tools/verify-settings-page.ps1`、`test-m08-caj-cache.py` 和我们的构建脚本引用，改产出名会把这些一起牵动，而收益为零——用户看到的只有 `.build/` 里那一个文件。
+没有在 `.vcxproj` 里设 `TargetName`。理由是实测过的连带面：`out/rel64/SumatraPDF.exe` 这个名字被 `fork/tools/verify-settings-page.ps1`、`test-m08-caj-cache.py` 和我们的构建脚本引用，改产出名会把这些一起牵动，而收益为零——用户看到的只有 `.build/` 里那一个文件。
 
 **改名安全性（这条是实测，不是推理）**：便携配置文件名是硬编码字面量 `SumatraPDF-settings.txt`（`src/AppSettings.cpp:81`），不随 exe 名变；`-bench` 用 `SumatraPDF-Q.exe` 跑，日志仍读到 `LoadSettings('...\.build\SumatraPDF-settings.txt')` 且 CAJ 缓存命中。⇒ 换名零副作用。
 **已知连带**：`src/PreviewPipe.cpp:42` 用 `GetPathInExeDirTemp("SumatraPDF.exe")` 回找主程序——那是 PdfPreview2.dll 的路径，我们的产品不发布 shell 扩展，所以不触发；若哪天附带预览器，那行必须同步改。
@@ -354,7 +354,7 @@ bool CrashHandlerCanUseNet() {
   `AUTHORS`、`mupdf/COPYING`（AGPLv3）都是现成的，再加一份 `LICENSE` 只是同一个事实的第二个真源。
   README 的许可一节直接链接 `COPYING` 并列出 MuPDF/caj2pdf-core 的许可。
 
-### 27. 三处版本号必须有机器判等：`.plan/tools/check-release-version.py`
+### 27. 三处版本号必须有机器判等：`fork/tools/check-release-version.py`
 
 `src/Version.h` 的 `VER_QUALIFIER`、`RELEASES.md` 最新条目标题、`readme.md` 首行——三处写的是同一个数，以前只靠注释互指。新门禁逐处读出并判等，另断言 `RELEASES.md` 的「版本对应关系」表里有这一行，以及记号形状合法（24/23 那条粘贴约束）。本轮实跑读数：`Version.h : 基线 3.6.1 + 修订 Q1 => 3.6.1Q1`，三处一致。
 （落点从 `RELEASES.md` 改成 `HISTORY.md` 之后重跑过红证：临时把修订写成 `Q9`，三格全红；还原后 md5 与快照一致。）
@@ -376,7 +376,7 @@ bool CrashHandlerCanUseNet() {
   原来会把焦点设到 `NULL`）。
 - `GetMessageW` 返回 0/-1 的退出路径补 `DestroyWindow`，不再留下没人拥有的页面窗口。
 
-**先红后绿**（`.plan/tools/test-r1-reentry.ps1`）：判据不用"真去点出崩溃"（不想赌 Windows
+**先红后绿**（`fork/tools/test-r1-reentry.ps1`）：判据不用"真去点出崩溃"（不想赌 Windows
 会不会弹错误对话框），改成数窗口——`Ctrl+N` 开第二主窗口后在两个窗口各发一次 `WM_COMMAND 319`，
 **断言「选项」窗口必须恰好 1 个**。未修的 exe 上跑：`2 个` → FAIL；修完：`1 个` → PASS。
 多主窗口这条路是合法功能（`CmdNewWindow=242` 在菜单里），测试第 2 步就断言它能开出 2 个主窗口。
@@ -440,7 +440,7 @@ custom caption 的高度**用。也就是说标签条的高度是由"我们自�
 用户给的形状是两条：**每个标签页距离顶部边框线都有很大间隔**、**标签页和标题栏右侧的按钮没有在垂直方向上对齐**。
 这条以前挂在账上是因为我坚持"没有真实读数不动外观"。这次先把量具做出来，再改。
 
-### 33. 缺陷的真实数字（`.plan/tools/test-m09-caption-align.ps1`）
+### 33. 缺陷的真实数字（`fork/tools/test-m09-caption-align.ps1`）
 
 在同一份**未修**的构建上量（96 DPI，两个文档打开使标签条可见）：
 
@@ -573,7 +573,7 @@ if (IsZoomed(hwndFrame)) {
 - 日志加一行 `SettingsPage: bg=#rrggbb text=#rrggbb`，让"用了哪个色"有机器记录。
 
 判据不是"比系统灰好看"，而是**改参数读数必须跟着变**：新门禁
-`.plan/tools/test-options-theme-colors.ps1` 起三次真程序量那一行日志，实跑
+`fork/tools/test-options-theme-colors.ps1` 起三次真程序量那一行日志，实跑
 Light 默认 `#f2f2f2`、设 `MainWindowBackground = #ffff00aa` → `#ff00aa`、`Theme = Dark` → `#000000`；
 断言"B 必须等于 ff00aa"、"A != B"、"Dark 亮度 < 128"、"C != A"。
 Light 主题下差别看着不明显是因为 `#f2f2f2` 与系统灰 `#f0f0f0` 只差两档，**真正的差别在 Dark**（原来灰底黑字，现在黑底）。
@@ -602,7 +602,7 @@ sp->textCol = ThemeDocumentColors(sp->bgCol);   // FixedPageUI 的 BackgroundCol
 ```
 
 `ThemeDocumentColors()`（`src/Theme.cpp:300`）一次给出**底 + 字**这一对，且两个都由设置项控制。
-实测三态（`.plan/tools/test-options-theme-colors.ps1`，起三次真程序读日志）：
+实测三态（`fork/tools/test-options-theme-colors.ps1`，起三次真程序读日志）：
 
 | 态 | 底 | 字 | 亮度差 |
 | --- | --- | --- | --- |
@@ -621,6 +621,16 @@ sp->textCol = ThemeDocumentColors(sp->bgCol);   // FixedPageUI 的 BackgroundCol
 按钮不额外画色：参照物的按钮就是系统画的普通按钮，我们一样（`WM_CTLCOLORBTN` 只影响勾选框那侧的
 背景填充，让它在自定义底色上不留旧灰）。
 
+### 43. 仓库布局收拢：我们自己的文件进 `fork/`，根目录只留上游原样 + readme
+
+用户原话：根目录太乱，官方文件和我们的文档分不清。落地：
+
+- `CHANGES.md` / `HISTORY.md` / `MODIFICATIONS.md` 从根目录 `git mv` 进 **`fork/`**（git 记为重命名，历史可追）。
+- 7 枚门禁脚本从 `.plan/tools/` 拷入 **`fork/tools/`**（`.plan` 不入库），`baseline-tree.txt` 同步拷入 `fork/`——从此核对门禁本身也在版本控制里，任何机器 clone 下来就能跑。
+- 12 处绝对路径（`E:\tmp\...`）全部换成脚本自定位：py 用 `__file__` 上溯三级，ps1 用 `$PSScriptRoot` 上溯三级；`grep` 复核 0 残留（规则：仓库里不得出现本机路径）。
+- 文档交叉链接同步改指 `fork/...`；`readme.md` 增加「文档」一节索引这批文件。
+- `.plan/`（m00–m12 计划文档）**有意留在仓库外**：里面是本机路径和开发过程笔记，不是交付物。
+
 ## 已知未完成（不是缺陷清单，是下一轮的活）
 6. ~~关于页「邱宗满」能否出墨~~ **已验收**（用户 2026-10-30 目测：正常）。Arial Black 本身无中日韩字形，实测由 GDI 字体链接画出；我的离屏探针两次不可信，已记入原因，不要再为此改那行字体。
 
@@ -628,7 +638,7 @@ sp->textCol = ThemeDocumentColors(sp->bgCol);   // FixedPageUI 的 BackgroundCol
 2. `.kdh` / `.nh` / `.c8` 未注册（上游矩阵里它们是 experimental）。
 3. 资源管理器预览/缩略图处理器未做（m03 明确排除；要它就得带 `PdfPreview2.dll` 并注册，与单 exe 冲突）。
 4. 选项页按用户 2026-10-30 的决定**收窄到 9 项、单栏**（判据见 12e，最后一轮见 12f），其余（颜色 / 电子书 / 漫画 / CHM / 批注 / TeX / DPI / 主题 / 菜单工具栏开关 / 逐项恢复默认 / `CajCacheCleanup` 档位）**明确不做**，不是待办。
-5. 基线 commit 仍欠着（本机 git 未配身份）。
+5. ~~基线 commit 仍欠着（本机 git 未配身份）~~ **已清**：基线以 `git write-tree` 钉住（tree `0899981c…`），后续提交用内联 `-c` 身份，不改 git 配置。
 
 ## 已修（从旧「未完成」清单里划掉的）
 

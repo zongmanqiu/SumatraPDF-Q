@@ -33,7 +33,16 @@
 
 版本号规则：`<官方基线>Q<修订>`。`3.6.1` 表示切自官方 3.6.1，`Q1` 是我们自己的第 1 个修订
 （因为会在同一官方基线上反复修改，需要一个不掺混的序号）。当前版本 **3.6.1Q2**，
-会显示在「帮助 → 关于」和 exe 属性页里。逐版本记录见 [HISTORY.md](HISTORY.md)。
+会显示在「帮助 → 关于」和 exe 属性页里。逐版本记录见 [fork/HISTORY.md](fork/HISTORY.md)。
+
+## 文档
+
+改版自己的文件都收在 [fork/](fork/) 里，与官方上游文件分开：
+
+- [fork/HISTORY.md](fork/HISTORY.md) — 版本历史（给人看的）
+- [fork/MODIFICATIONS.md](fork/MODIFICATIONS.md) — 相对官方基线改了哪些文件（与 git 实际结果机器互校）
+- [fork/CHANGES.md](fork/CHANGES.md) — 逐文件偏离账、每处改动的实测读数
+- [fork/tools/](fork/tools/) — 上述清单与版本号的自动核对门禁，跑法见各文件头注释
 
 ## 许可
 

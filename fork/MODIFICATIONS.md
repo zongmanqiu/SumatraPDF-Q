@@ -12,7 +12,7 @@
 
 一句话原则：**只做两件事（CAJ 直开、选项页），改动面越小越好，且每一处都能单独撤销。**
 
-本清单与 `git diff` 的实际结果由门禁 `.plan/tools/diff-vs-baseline.py` 双向核对
+本清单与 `git diff` 的实际结果由门禁 `fork/tools/diff-vs-baseline.py` 双向核对
 
 （清单里不许漏文件，也不许留下已经不存在的文件）。
 
@@ -50,7 +50,7 @@
 
 | `src/UpdateCheck.cpp` | `StartAsyncUpdateCheck()` 顶部加总闸：本改版不检查官方更新（手动路径原本绕过 pref，只改默认值封不住）。**原逻辑一行未删** | 改版必要 |
 
-| `src/Version.h` | 新增 `kAppDisplayName` / `kAppDisplayNameW`（对外可见名）；新增 `VER_QUALIFIER Q1`（自有版本号） | 署名 / 版本 |
+| `src/Version.h` | 新增 `kAppDisplayName` / `kAppDisplayNameW`（对外可见名）；新增 `VER_QUALIFIER`（自有版本号，当前 Q2） | 署名 / 版本 |
 
 | `src/SumatraPDF.rc` | `FileDescription` 用对外名（任务管理器读这一格）；`ProductName`、`LegalCopyright`、`CompanyName` **保持上游原样** | 署名 |
 
@@ -61,7 +61,7 @@
 
 
 
-## 我们新增的文件（10 个，全部不碰官方同名文件）
+## 我们新增的文件（11 个，全部不碰官方同名文件）
 
 
 
@@ -79,13 +79,15 @@
 
 | `CHANGES.md` / `HISTORY.md` / `readme` 之外的本文 | 偏离账、版本历史、修改说明 |
 
+| `fork/`（本目录） | `CHANGES.md` / `HISTORY.md` / `MODIFICATIONS.md` 三份文档 + `baseline-tree.txt` 基线 tree 快照 + `tools/` 里 7 枚核对门禁（脚本自定位仓库根，不含本机路径） | 文档 / 门禁 |
+
 
 
 ## 官方更新时怎么跟进
 
 
 
-1. 先看偏离面：`git diff --name-status <基线tree>`，或跑 `.plan/tools/diff-vs-baseline.py`
+1. 先看偏离面：`git diff --name-status <基线tree>`，或跑 `fork/tools/diff-vs-baseline.py`
 
    （它会逐文件实名列出，并检查每个改动都在 `CHANGES.md` 里登记过）。
 
