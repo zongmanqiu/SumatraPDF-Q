@@ -398,6 +398,33 @@ void RegisterCaptionWndClass() {
     RegisterClassEx(&wcex);
 }
 
+// The top rows of the band must stay a resize grip: the band used to start 8 px
+// below the window top (the frame thickness), which left that 8 px to the frame
+// as HTTOP. Now that the band sits on the caption buttons, the grip lives inside
+// the band and the tab control has to pass those rows through.
+int GetTopResizeGrabDy(int bandDy) {
+    return std::min(kTopResizeGrabDy, std::max(4, bandDy / 3));
+}
+
+static WNDPROC gDefTabCtrWndProc = nullptr;
+
+static LRESULT CALLBACK TabCtrHitProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
+    if (WM_NCHITTEST == msg && gDefTabCtrWndProc) {
+        HWND frame = GetAncestor(hwnd, GA_ROOT);
+        if (frame && !IsZoomed(frame) && !IsIconic(frame)) {
+            RECT bandRc{};
+            if (GetWindowRect(GetParent(hwnd), &bandRc)) {
+                int grab = GetTopResizeGrabDy(bandRc.bottom - bandRc.top);
+                if (GET_Y_LPARAM(lp) < bandRc.top + grab) {
+                    // let the frame see this row: it answers HTTOP there
+                    return HTTRANSPARENT;
+                }
+            }
+        }
+    }
+    return CallWindowProc(gDefTabCtrWndProc, hwnd, msg, wp, lp);
+}
+
 void GetCaptionBand(HWND hwndFrame, int* topOut, int* dyOut) {
     // fall back to the old guess whenever DWM does not answer (composition off,
     // older Windows, or a degenerate rect)
@@ -489,6 +516,10 @@ void RelayoutCaption(MainWindow* win) {
     rc.x += tabHeight;
     rc.dx -= tabHeight;
     dh.SetWindowPos(win->tabsCtrl->hwnd, nullptr, rc.x, rc.y, rc.dx, tabHeight, SWP_NOZORDER);
+    HWND tabHwnd = win->tabsCtrl->hwnd;
+    if (tabHwnd && (WNDPROC)GetWindowLongPtr(tabHwnd, GWLP_WNDPROC) != TabCtrHitProc) {
+        gDefTabCtrWndProc = (WNDPROC)SetWindowLongPtr(tabHwnd, GWLP_WNDPROC, (LONG_PTR)TabCtrHitProc);
+    }
     dh.End();
 
     UpdateTabWidth(win);
@@ -828,7 +859,16 @@ LRESULT CustomCaptionFrameProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp, bool* 
             Rect rCaption = WindowRect(win->hwndCaption);
             if (rClient.Contains(pt) && pt.y < rCaption.y + rCaption.dy) {
                 *callDef = false;
-                if (pt.y < rCaption.y) {
+                // The band now starts where DWM says the caption buttons start, which
+                // can be the very top of the window: "above the band" no longer leaves
+                // a grab line, so keep the first rows of the band for resizing - but
+                // only while the window can actually be resized.
+                int grabTop = rCaption.y;
+                if (!IsIconic(hwnd) && !IsZoomed(hwnd)) {
+                    int grab = GetTopResizeGrabDy(rCaption.dy);
+                    grabTop += grab;
+                }
+                if (pt.y < grabTop) {
                     return HTTOP;
                 }
                 return HTCAPTION;

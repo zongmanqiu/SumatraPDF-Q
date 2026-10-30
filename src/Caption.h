@@ -11,6 +11,10 @@
    reports the real band, so use it when it answers.
    Out parameters instead of a struct: this header is included twice in one
    translation unit (SumatraPDF.cpp) and project headers have no include guards. */
+// how many rows at the top of the caption band stay a resize grip
+#define kTopResizeGrabDy 8
+int GetTopResizeGrabDy(int bandDy);
+
 void GetCaptionBand(HWND hwndFrame, int* topOut, int* dyOut);
 
 void CreateCaption(MainWindow* win);
