@@ -1,7 +1,7 @@
 # CHANGES · 我们对 SumatraPDF 3.6.1 的全部修改
 
 基线：GitHub tag `3.6.1rel`（commit `16c59fde8`），`CURR_VERSION 3.6.1`。
-基线快照的 git tree：`0899981cbf84be2f59999e370f86c737f2d3565f`（见 `fork/baseline-tree.txt`）。
+基线快照的 git tree：`0899981cbf84be2f59999e370f86c737f2d3565f`（见 `tools/baseline-tree.txt`）。
 对账：`git diff 0899981c -- .`（基线 commit 补上后）或 `diff -rq ../.3rd/sumatrapdf-3.6.1rel .`
 
 规则：一处偏离一条。**坐标写符号名，不写行号**（行号会随注释漂移，且没有门禁读它）。每条都要能单独撤销。
@@ -163,7 +163,7 @@ caj-cache\<原文件名>.pdf                 名字就是源文件换后缀；�
 
 这轮 9 项：`UseTabs`、`RestoreSession`、`RememberOpenedFiles`、`ReuseInstance`、`FullPathInTitle`、`SmoothScroll`、`RememberStatePerDocument`、`ReloadModifiedDocuments`、`LazyLoading`。
 
-实测（`fork/tools/verify-settings-page.ps1`，PASS）：9 标签 / 9 勾选框 / 0 编辑框 / 2 按钮；20 个控件两两零重叠；最底控件底边 667 ≤ 窗口底边 687；`measured labelDx=186` 与「标签控件最大宽 186」两个读数相等 ⇒ 没有文字被截；改 UseTabs → 确定 → 只有那一行变化，取消 → 文件不动。
+实测（`tools/verify-settings-page.ps1`，PASS）：9 标签 / 9 勾选框 / 0 编辑框 / 2 按钮；20 个控件两两零重叠；最底控件底边 667 ≤ 窗口底边 687；`measured labelDx=186` 与「标签控件最大宽 186」两个读数相等 ⇒ 没有文字被截；改 UseTabs → 确定 → 只有那一行变化，取消 → 文件不动。
 
 **顺手修的却是脚本自己的缺陷**：打印窗口尺寸那行写成 `$(($dr[2]-$dr[0]))x(($dr[3]-$dr[1]))`，PowerShell 把 `$dr[3]-$dr[1]` 当成变量减法的切片解析，输出的是表达式原文而不是数字 —— 高度那一格从来没读到过。改成先赋 `$dlgW`/`dlgH` 再插值。**读数量具自己把读数吐成乱码，比产品出错更危险**：它看起来是绿的。
 
@@ -181,7 +181,7 @@ caj-cache\<原文件名>.pdf                 名字就是源文件换后缀；�
 
 ### 12c. 验证
 
-`fork/tools/verify-settings-page.ps1`（起真程序、真点、真存盘）现在断言四件事，全 PASS：
+`tools/verify-settings-page.ps1`（起真程序、真点、真存盘）现在断言四件事，全 PASS：
 
 - 结构断言 `标签数 == 勾选框 + 编辑框 + 下拉`（当前读数：9 = 9 + 0 + 0，另有 2 个按钮），另断言标签数不少于 8，防止表被删坏；
 - **控件两两矩形零重叠**（当前 20 个控件；这条是「不丑」的可机检替身）；
@@ -215,7 +215,7 @@ caj-cache\<原文件名>.pdf                 名字就是源文件换后缀；�
 - 可增长的字符串是 `str::Str`（`AppendFmt` / `AsByteSlice` / `StealData`），**不是**全局那个 `Str`；`LendData()` 是借出不是交出所有权（在 m08 里已经因此崩过一次）。
 - 数字解析用 `ParseInt(s)` 和 `str::Parse(s, "%f", &v)`，没有 `str::ToInt` / `str::ToFloat`。
 
-### 16. 验证方式（两份，都在 `fork/tools/`）
+### 16. 验证方式（两份，都在 `tools/`）
 
 - **文本门禁** `check-settings-descriptors.py`：解析 `Settings.h` 的名字串与字段表，逐行核对 descriptor 的名字存在、类型与控件匹配。**一秒，不需要编译**。它第一跑就翻红抓到 `GradientColors` 其实是 `ColorArray`（数组不进页面，已删）。
 - **端到端** `verify-settings-page.ps1`：见 12c。
@@ -262,7 +262,7 @@ VALUE "CompanyName",     kPublisherStr       // 保持 Krzysztof Kowalczyk
 
 ### 20. 文件名：不改构建目标名，发布时改名（`SumatraPDF-Q.exe`）
 
-没有在 `.vcxproj` 里设 `TargetName`。理由是实测过的连带面：`out/rel64/SumatraPDF.exe` 这个名字被 `fork/tools/verify-settings-page.ps1`、`test-m08-caj-cache.py` 和我们的构建脚本引用，改产出名会把这些一起牵动，而收益为零——用户看到的只有 `.build/` 里那一个文件。
+没有在 `.vcxproj` 里设 `TargetName`。理由是实测过的连带面：`out/rel64/SumatraPDF.exe` 这个名字被 `tools/verify-settings-page.ps1`、`test-m08-caj-cache.py` 和我们的构建脚本引用，改产出名会把这些一起牵动，而收益为零——用户看到的只有 `.build/` 里那一个文件。
 
 **改名安全性（这条是实测，不是推理）**：便携配置文件名是硬编码字面量 `SumatraPDF-settings.txt`（`src/AppSettings.cpp:81`），不随 exe 名变；`-bench` 用 `SumatraPDF-Q.exe` 跑，日志仍读到 `LoadSettings('...\.build\SumatraPDF-settings.txt')` 且 CAJ 缓存命中。⇒ 换名零副作用。
 **已知连带**：`src/PreviewPipe.cpp:42` 用 `GetPathInExeDirTemp("SumatraPDF.exe")` 回找主程序——那是 PdfPreview2.dll 的路径，我们的产品不发布 shell 扩展，所以不触发；若哪天附带预览器，那行必须同步改。
@@ -354,7 +354,7 @@ bool CrashHandlerCanUseNet() {
   `AUTHORS`、`mupdf/COPYING`（AGPLv3）都是现成的，再加一份 `LICENSE` 只是同一个事实的第二个真源。
   README 的许可一节直接链接 `COPYING` 并列出 MuPDF/caj2pdf-core 的许可。
 
-### 27. 三处版本号必须有机器判等：`fork/tools/check-release-version.py`
+### 27. 三处版本号必须有机器判等：`tools/check-release-version.py`
 
 `src/Version.h` 的 `VER_QUALIFIER`、`RELEASES.md` 最新条目标题、`readme.md` 首行——三处写的是同一个数，以前只靠注释互指。新门禁逐处读出并判等，另断言 `RELEASES.md` 的「版本对应关系」表里有这一行，以及记号形状合法（24/23 那条粘贴约束）。本轮实跑读数：`Version.h : 基线 3.6.1 + 修订 Q1 => 3.6.1Q1`，三处一致。
 （落点从 `RELEASES.md` 改成 `HISTORY.md` 之后重跑过红证：临时把修订写成 `Q9`，三格全红；还原后 md5 与快照一致。）
@@ -376,7 +376,7 @@ bool CrashHandlerCanUseNet() {
   原来会把焦点设到 `NULL`）。
 - `GetMessageW` 返回 0/-1 的退出路径补 `DestroyWindow`，不再留下没人拥有的页面窗口。
 
-**先红后绿**（`fork/tools/test-r1-reentry.ps1`）：判据不用"真去点出崩溃"（不想赌 Windows
+**先红后绿**（`tools/test-r1-reentry.ps1`）：判据不用"真去点出崩溃"（不想赌 Windows
 会不会弹错误对话框），改成数窗口——`Ctrl+N` 开第二主窗口后在两个窗口各发一次 `WM_COMMAND 319`，
 **断言「选项」窗口必须恰好 1 个**。未修的 exe 上跑：`2 个` → FAIL；修完：`1 个` → PASS。
 多主窗口这条路是合法功能（`CmdNewWindow=242` 在菜单里），测试第 2 步就断言它能开出 2 个主窗口。
@@ -440,7 +440,7 @@ custom caption 的高度**用。也就是说标签条的高度是由"我们自�
 用户给的形状是两条：**每个标签页距离顶部边框线都有很大间隔**、**标签页和标题栏右侧的按钮没有在垂直方向上对齐**。
 这条以前挂在账上是因为我坚持"没有真实读数不动外观"。这次先把量具做出来，再改。
 
-### 33. 缺陷的真实数字（`fork/tools/test-m09-caption-align.ps1`）
+### 33. 缺陷的真实数字（`tools/test-m09-caption-align.ps1`）
 
 在同一份**未修**的构建上量（96 DPI，两个文档打开使标签条可见）：
 
@@ -573,7 +573,7 @@ if (IsZoomed(hwndFrame)) {
 - 日志加一行 `SettingsPage: bg=#rrggbb text=#rrggbb`，让"用了哪个色"有机器记录。
 
 判据不是"比系统灰好看"，而是**改参数读数必须跟着变**：新门禁
-`fork/tools/test-options-theme-colors.ps1` 起三次真程序量那一行日志，实跑
+`tools/test-options-theme-colors.ps1` 起三次真程序量那一行日志，实跑
 Light 默认 `#f2f2f2`、设 `MainWindowBackground = #ffff00aa` → `#ff00aa`、`Theme = Dark` → `#000000`；
 断言"B 必须等于 ff00aa"、"A != B"、"Dark 亮度 < 128"、"C != A"。
 Light 主题下差别看着不明显是因为 `#f2f2f2` 与系统灰 `#f0f0f0` 只差两档，**真正的差别在 Dark**（原来灰底黑字，现在黑底）。
@@ -602,7 +602,7 @@ sp->textCol = ThemeDocumentColors(sp->bgCol);   // FixedPageUI 的 BackgroundCol
 ```
 
 `ThemeDocumentColors()`（`src/Theme.cpp:300`）一次给出**底 + 字**这一对，且两个都由设置项控制。
-实测三态（`fork/tools/test-options-theme-colors.ps1`，起三次真程序读日志）：
+实测三态（`tools/test-options-theme-colors.ps1`，起三次真程序读日志）：
 
 | 态 | 底 | 字 | 亮度差 |
 | --- | --- | --- | --- |
@@ -662,3 +662,23 @@ sp->textCol = ThemeDocumentColors(sp->bgCol);   // FixedPageUI 的 BackgroundCol
 
 - **另存为默认名**：m08 把缓存文件名改成「源文件名换后缀」后，`ctrl->GetFilePath()` 就是 `论文.pdf`，另存为默认名自然正确。
 - **目标 A 选项设置页**：m04 已落地 59 行 / 9 组，读写与存盘端到端验证通过。
+
+### 45. 第二轮布局：文档提到根目录（README.md 大写），产物经目录联接落 `.temp/`
+
+用户两条：① 根目录也该放我们常规文档（README.md 要大写、还要 HISTORY.md 之类，参照 pecia）；
+② `upstream/` 里 2 GB 不正常——那里只放源码，编译中间产物去 `.temp/`。
+
+**布局**：根目录 = `README.md` + `HISTORY.md` + `CHANGES.md` + `MODIFICATIONS.md` + `tools/`（7 枚门禁 +
+`baseline-tree.txt`，由 `fork/` 改名而来）+ `upstream/`。全部 `git mv`，git 记为重命名。
+
+**产物出树**（`out/` 实测 1.9 GB，是 upstream 唯一的胖子；ext 85 MB / mupdf 78 MB 都是必需源码）：
+- 先试了 msbuild 全局 `/p:OutDir=/p:IntDir=` 覆盖——查到 mupdf/dav1d/mupdf-libs 三个工程里有
+  **上千处硬编码** `../out/<config>/obj/...`（CustomBuild 条目的 Outputs），逐条改 1184 处又脏又抬升级成本，**弃**。
+- 改用**目录联接**：`upstream/out`（junction）→ `.temp/upstream-out/`。构建零改动（所有硬编码路径原样成立，
+  物理落盘在 `.temp/`），`du` 实测 `upstream/`（不含联接）= 191 MB。代价：新 clone 要重建联接，
+  `build-rel.bat` / `build-one.bat` 已加自动补建一行。
+- `cmd/build-cajshim.ts` 与 `SumatraPDF.vcxproj` 的 cajshim 路径**一行没动**（曾改成 `.temp` 相对路径，发现联接方案后撤销）。
+
+**验证**：msbuild EXITCODE=0（逻辑路径没变 ⇒ 增量全绿，exe 未重链）；三枚静态门禁全绿
+（17 项偏离账、3.6.1Q2 三格判等、9 项描述符）；m08 端到端 ALL PASS（exe 从 `.temp/upstream-out/rel64` 起跑）；
+`.build/SumatraPDF-Q.exe` md5 与挪动前一致（本轮无产品改动）。

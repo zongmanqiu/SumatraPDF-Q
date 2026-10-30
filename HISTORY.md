@@ -10,7 +10,7 @@
 > commit `16c59fde8`），`Q1 / Q2 / …` 是 SumatraPDF-Q 自己的修订序号——我们在同一个官方
 > 基线上反复修改，靠它区分先后。写进代码的那一处是 `src/Version.h` 的 `VER_QUALIFIER`
 > （上游专为重编译器留的钩子），本文件、`readme.md` 与它三处必须一致，由
-> `fork/tools/check-release-version.py` 判等。
+> `tools/check-release-version.py` 判等。
 
 ---
 

@@ -14,9 +14,9 @@ import shutil
 import subprocess
 import sys
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 SRC_CAJ = os.path.join(ROOT, ".ex", "儿童青少年期内外化问题的共发及亲子关系和友谊质量的影响.caj")
-EXE_SRC = os.path.join(ROOT, ".main", "upstream", "out", "rel64", "SumatraPDF.exe")
+EXE_SRC = os.path.join(ROOT, ".temp", "upstream-out", "rel64", "SumatraPDF.exe")
 T = os.path.join(ROOT, ".temp", "m08")
 TAB = chr(9)
 NL = chr(10)

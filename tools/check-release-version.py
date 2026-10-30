@@ -14,10 +14,10 @@ import os
 import re
 import sys
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 VERSION_H = os.path.join(ROOT, ".main", "upstream", "src", "Version.h")
-HISTORY = os.path.join(ROOT, ".main", "fork", "HISTORY.md")
-README = os.path.join(ROOT, ".main", "readme.md")
+HISTORY = os.path.join(ROOT, ".main", "HISTORY.md")
+README = os.path.join(ROOT, ".main", "README.md")
 
 vtxt = open(VERSION_H, encoding="utf-8", errors="replace").read()
 rtxt = open(HISTORY, encoding="utf-8", errors="replace").read()

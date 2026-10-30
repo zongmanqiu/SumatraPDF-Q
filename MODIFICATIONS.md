@@ -12,7 +12,7 @@
 
 一句话原则：**只做两件事（CAJ 直开、选项页），改动面越小越好，且每一处都能单独撤销。**
 
-本清单与 `git diff` 的实际结果由门禁 `fork/tools/diff-vs-baseline.py` 双向核对
+本清单与 `git diff` 的实际结果由门禁 `tools/diff-vs-baseline.py` 双向核对
 
 （清单里不许漏文件，也不许留下已经不存在的文件）。
 
@@ -25,7 +25,7 @@
 ## 改动的上游文件（17 个）
 
 > 下表与门禁输出里的路径都是**基线相对路径**；在仓库里它们位于 `upstream/` 下
-> （m13b 起，整个上游树收进 `upstream/`，根目录只留 `readme.md` 与 `fork/`）。
+> （m13b 起，整个上游树收进 `upstream/`；我们的文档与 `tools/` 门禁在仓库根目录）。
 
 
 
@@ -82,7 +82,7 @@
 
 | `CHANGES.md` / `HISTORY.md` / `readme` 之外的本文 | 偏离账、版本历史、修改说明 |
 
-| `fork/`（本目录） | `CHANGES.md` / `HISTORY.md` / `MODIFICATIONS.md` 三份文档 + `baseline-tree.txt` 基线 tree 快照 + `tools/` 里 7 枚核对门禁（脚本自定位仓库根，不含本机路径） | 文档 / 门禁 |
+| `tools/` | `baseline-tree.txt` 基线 tree 快照 + 7 枚核对门禁（脚本自定位仓库根，不含本机路径）；三份文档在仓库根目录 | 门禁 |
 
 
 

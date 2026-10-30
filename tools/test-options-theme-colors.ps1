@@ -28,8 +28,8 @@ public class Q {
 "@
 
 # DERIVE: repo root = three levels up from fork/tools
-$ROOT = (Get-Item (Join-Path $PSScriptRoot "..\..\..")).FullName
-$EXE  = "$ROOT\.main\upstream\out\rel64\SumatraPDF.exe"
+$ROOT = (Get-Item (Join-Path $PSScriptRoot "..\..")).FullName
+$EXE  = "$ROOT\.temp\upstream-out\rel64\SumatraPDF.exe"
 $BASE = "$ROOT\.temp\m12-color"
 $WM_COMMAND = 0x0111
 $CmdOptions = 319

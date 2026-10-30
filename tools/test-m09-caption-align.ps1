@@ -68,9 +68,9 @@ public class P {
 
 $ErrorActionPreference = "Stop"   # 判据里任何异常都必须终止：上一版 foreach 抛了却仍报 PASS
 # DERIVE: repo root = three levels up from fork/tools
-$ROOT = (Get-Item (Join-Path $PSScriptRoot "..\..\..")).FullName
+$ROOT = (Get-Item (Join-Path $PSScriptRoot "..\..")).FullName
 $T   = "$ROOT\.temp\m09t"
-$EXE = "$ROOT\.main\upstream\out\rel64\SumatraPDF.exe"
+$EXE = "$ROOT\.temp\upstream-out\rel64\SumatraPDF.exe"
 $CAJ = "$ROOT\.ex\儿童青少年期内外化问题的共发及亲子关系和友谊质量的影响.caj"
 $PDF = "$ROOT\.build\caj-cache\儿童青少年期内外化问题的共发及亲子关系和友谊质量的影响.pdf"
 

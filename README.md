@@ -37,13 +37,15 @@
 
 ## 文档
 
-改版自己的文件都收在 [fork/](fork/) 里；官方上游的原样代码树在 [upstream/](upstream/)，
-根目录不与上游文件混放：
+我们的常规文档都按惯例放在根目录（布局参照 pecia）：
 
-- [fork/HISTORY.md](fork/HISTORY.md) — 版本历史（给人看的）
-- [fork/MODIFICATIONS.md](fork/MODIFICATIONS.md) — 相对官方基线改了哪些文件（与 git 实际结果机器互校）
-- [fork/CHANGES.md](fork/CHANGES.md) — 逐文件偏离账、每处改动的实测读数
-- [fork/tools/](fork/tools/) — 上述清单与版本号的自动核对门禁，跑法见各文件头注释
+- [HISTORY.md](HISTORY.md) — 版本历史（给人看的）
+- [MODIFICATIONS.md](MODIFICATIONS.md) — 相对官方基线改了哪些文件（与 git 实际结果机器互校）
+- [CHANGES.md](CHANGES.md) — 逐文件偏离账、每处改动的实测读数
+- [tools/](tools/) — 上述清单与版本号的自动核对门禁，跑法见各文件头注释
+
+官方上游的原样代码树在 [upstream/](upstream/)；构建产物不进版本库也不堆在源码树里，
+通过 `upstream/out` 目录联接落到仓库外的 `.temp/upstream-out/`。
 
 ## 许可
 

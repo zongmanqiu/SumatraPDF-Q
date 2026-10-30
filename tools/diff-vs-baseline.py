@@ -8,11 +8,11 @@ import re
 import subprocess
 import sys
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 TREE = os.path.join(ROOT, ".main", "upstream")
 MAIN = os.path.join(ROOT, ".main")
 BASELINE = os.path.join(ROOT, ".3rd", "sumatrapdf-3.6.1rel")
-TREE_FILE = os.path.join(ROOT, ".main", "fork", "baseline-tree.txt")
+TREE_FILE = os.path.join(ROOT, ".main", "tools", "baseline-tree.txt")
 
 
 def git(*args):
@@ -93,7 +93,7 @@ for p in sorted(added):
     print("  ", p)
 
 # 4. the gate: every changed upstream file must be named in CHANGES.md
-changes_md = os.path.join(MAIN, "fork", "CHANGES.md")
+changes_md = os.path.join(MAIN, "CHANGES.md")
 if not os.path.isfile(changes_md):
     print("\nFAIL: CHANGES.md 不存在")
     sys.exit(1)
@@ -113,7 +113,7 @@ print("OK: 每个被改的上游文件都在 CHANGES.md 里有名字")
 #    and no file claimed there that we no longer touch. The claim is scoped to
 #    that one section so licence prose (mupdf/COPYING etc.) can't be mistaken
 #    for a modification.
-MODS = os.path.join(MAIN, "fork", "MODIFICATIONS.md")
+MODS = os.path.join(MAIN, "MODIFICATIONS.md")
 NLH = chr(10)
 NLJ = " " * 6 + chr(10) + "      "
 listed = git("ls-tree", "-r", "--name-only", tree).splitlines()
