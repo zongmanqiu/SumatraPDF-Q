@@ -327,7 +327,18 @@ static void FinishPage(SettingsPage* sp, int result) {
 }
 
 static LRESULT CALLBACK PageProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
-    SettingsPage* sp = gPage;
+    // state must come from the window, not from a global: SumatraPDF legitimately
+    // supports several main windows (CmdNewWindow), and this dialog pumps all
+    // thread messages, so a second 选项 page used to overwrite the one global and
+    // the first page's next button press then dereferenced a null SettingsPage.
+    if (WM_NCCREATE == msg) {
+        CREATESTRUCTW* cs = reinterpret_cast<CREATESTRUCTW*>(lp);
+        SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(cs->lpCreateParams));
+    }
+    SettingsPage* sp = reinterpret_cast<SettingsPage*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+    if (!sp) {
+        return DefWindowProcW(hwnd, msg, wp, lp);
+    }
     switch (msg) {
         case WM_CREATE: {
             sp->hwnd = hwnd;
@@ -404,6 +415,14 @@ int ShowSettingsPageDialog(HWND parent) {
         sRegistered = true;
     }
 
+    // only one page at a time, however many main windows there are: activate the
+    // page that is already open instead of stacking a second one on top of it
+    if (gPage && gPage->hwnd) {
+        SetForegroundWindow(gPage->hwnd);
+        logf("SettingsPage: already open, activating it instead\n");
+        return IDCANCEL;
+    }
+
     SettingsPage page{};
     gPage = &page;
     EnableWindow(parent, FALSE);
@@ -423,7 +442,7 @@ int ShowSettingsPageDialog(HWND parent) {
     int y = pr.top + ((pr.bottom - pr.top) - h) / 2;
 
     page.hwnd = CreateWindowExW(WS_EX_DLGMODALFRAME, kPageClass, L"选项", WS_POPUP | WS_CAPTION | WS_SYSMENU, x, y, w,
-                                h, parent, nullptr, GetModuleHandle(nullptr), nullptr);
+                                h, parent, nullptr, GetModuleHandle(nullptr), &page);
     if (!page.hwnd) {
         logf("SettingsPage: create failed\n");
         gPage = nullptr;
@@ -432,7 +451,9 @@ int ShowSettingsPageDialog(HWND parent) {
     }
     ShowWindow(page.hwnd, SW_SHOW);
     UpdateWindow(page.hwnd);
-    SetFocus(page.rows[0].ctrl);
+    if (page.rowCount > 0) {
+        SetFocus(page.rows[0].ctrl);
+    }
 
     MSG msg;
     while (!page.done) {
@@ -447,6 +468,12 @@ int ShowSettingsPageDialog(HWND parent) {
         DispatchMessageW(&msg);
     }
 
+    if (page.hwnd) {
+        // GetMessageW returned 0/-1: nobody is left to pump messages for this
+        // window, so tear it down instead of leaving an ownerless page behind
+        DestroyWindow(page.hwnd);
+        page.hwnd = nullptr;
+    }
     EnableWindow(parent, TRUE);
     SetActiveWindow(parent);
     gPage = nullptr;

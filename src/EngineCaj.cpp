@@ -105,6 +105,45 @@ static u64 GetSrcStamp(const char* path, i64* sizeOut) {
     return FileTimeToU64(ft);
 }
 
+// A cached PDF is only trusted if it really starts like a PDF: an interrupted
+// conversion (killed process, full disk) used to leave a half-written file that
+// the next open found via Exists() and handed straight to MuPDF, so that source
+// never opened again.
+static bool HasPdfHeader(const char* path) {
+    HANDLE h = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
+                           FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (h == INVALID_HANDLE_VALUE) {
+        return false;
+    }
+    char buf[5]{};
+    DWORD got = 0;
+    BOOL ok = ReadFile(h, buf, 5, &got, nullptr);
+    CloseHandle(h);
+    return ok && got == 5 && 0 == memcmp(buf, "%PDF-", 5);
+}
+
+// index.txt is a file on disk that a user (or a bug) can edit, and its names are
+// later joined into paths that we open, write and delete. Only accept a bare
+// file name: no separators, no "..", no drive letter, nothing absurdly long.
+static bool IsBareCacheName(const char* name) {
+    if (!name || !*name) {
+        return false;
+    }
+    if (strlen(name) > 200) {
+        return false;
+    }
+    if (strstr(name, "..")) {
+        return false;
+    }
+    for (const char* p = name; *p; p++) {
+        char c = *p;
+        if ('/' == c || '\\' == c || ':' == c || '\t' == c || '\n' == c || '\r' == c) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static void AddEntry(const char* cachedName, const char* srcNorm, i64 size, u64 mtime, u64 lastUse) {
     CajCacheEntry* grown = AllocArray<CajCacheEntry>(gEntryCount + 1);
     if (!grown) {
@@ -139,6 +178,25 @@ static bool NameTakenByOther(const char* cachedName, const char* srcNorm) {
         }
     }
     return false;
+}
+
+// Drops an entry. The old failure path freed the two strings first and then
+// searched with `i < gEntryCount - 1`, which never examines the last element -
+// and a failed conversion of a *new* file is exactly the last element, so the
+// freed pair stayed in the array and the next open read it back.
+static void RemoveEntry(CajCacheEntry* e) {
+    if (!e) {
+        return;
+    }
+    for (int i = 0; i < gEntryCount; i++) {
+        if (&gEntries[i] == e) {
+            str::Free(e->cachedName);
+            str::Free(e->srcNorm);
+            memmove(&gEntries[i], &gEntries[i + 1], sizeof(CajCacheEntry) * (gEntryCount - 1 - i));
+            gEntryCount--;
+            return;
+        }
+    }
 }
 
 static void LoadIndex() {
@@ -181,8 +239,12 @@ static void LoadIndex() {
                         e.srcSize = strtoll(tab2 + 1, nullptr, 10);
                         e.srcMTime = strtoull(tab3 + 1, nullptr, 10);
                         e.lastUse = strtoull(tab4 + 1, nullptr, 10);
-                        if (*e.cachedName && *e.srcNorm) {
+                        if (*e.srcNorm && IsBareCacheName(e.cachedName)) {
                             AddEntry(e.cachedName, e.srcNorm, e.srcSize, e.srcMTime, e.lastUse);
+                        } else {
+                            // a name that could escape the cache directory is dropped,
+                            // not joined into a path we later delete
+                            logf("EngineCaj: ignoring malformed index line: '%s'\n", e.cachedName);
                         }
                     }
                 }
@@ -252,7 +314,7 @@ static void SweepCajCache(const char* dir) {
     }
 
     // orphans: cached PDFs with no index line (e.g. written before the index existed)
-    TempStr pattern = str::FormatTemp("%s\\*.pdf", dir);
+    TempStr pattern = str::FormatTemp("%s\\*.pdf*", dir);
     WIN32_FIND_DATAA fd{};
     HANDLE h = FindFirstFileA(pattern, &fd);
     if (h == INVALID_HANDLE_VALUE) {
@@ -282,16 +344,50 @@ static void SweepCajCache(const char* dir) {
     FindClose(h);
 }
 
+// A cached name goes into index.txt as one tab-separated field, and into a path.
+// NTFS allows TAB and newline in file names, so fold the characters that would
+// corrupt the line into '_' and cap the length (an over-long base name plus the
+// cache directory used to make the conversion fail, which then walked straight
+// into the entry-cleanup path). Truncation never splits a UTF-8 sequence.
+static TempStr SafeBaseTemp(const char* base) {
+    constexpr int kMaxChars = 60;
+    str::Str s;
+    const char* p = base;
+    for (int chars = 0; *p && chars < kMaxChars; chars++) {
+        unsigned char c = (unsigned char)*p;
+        int len = 1;
+        if ((c & 0xE0) == 0xC0) {
+            len = 2;
+        } else if ((c & 0xF0) == 0xE0) {
+            len = 3;
+        } else if ((c & 0xF8) == 0xF0) {
+            len = 4;
+        }
+        if ('\t' == c || '\n' == c || '\r' == c) {
+            s.AppendChar('_');
+        } else {
+            // the whole sequence, not just its first byte: appending one byte of a
+            // 3-byte Chinese character produced invalid UTF-8 and the converter
+            // answered "path is not valid UTF-8"
+            s.Append(p, len);
+        }
+        p += len;
+    }
+    TempStr out = s.IsEmpty() ? nullptr : str::DupTemp(s.CStr());
+    return out ? out : str::DupTemp(base);
+}
+
 // "<original name>.pdf", disambiguated with __2/__3 when a different source file
 // already owns that name. Readable on purpose: it is also what the Save-As
 // dialog suggests. Not "~2": a tilde makes GetFullPathNameW try 8.3 short-name
 // expansion on the cached file.
 static TempStr MakeCachedNameTemp(const char* srcPath, const char* srcNorm) {
     TempStr noExt = path::GetPathNoExtTemp(srcPath);
-    TempStr base = noExt ? path::GetBaseNameTemp(noExt) : nullptr;
-    if (str::IsEmpty(base)) {
-        base = (char*)"caj";
+    TempStr rawBase = noExt ? path::GetBaseNameTemp(noExt) : nullptr;
+    if (str::IsEmpty(rawBase)) {
+        rawBase = (char*)"caj";
     }
+    TempStr base = SafeBaseTemp(rawBase);
     TempStr name = str::JoinTemp(base, ".pdf");
     for (int n = 2; NameTakenByOther(name, srcNorm); n++) {
         name = str::FormatTemp("%s__%d.pdf", base, n);
@@ -318,53 +414,66 @@ EngineBase* CreateEngineCajFromFile(const char* path, PasswordUI* pwdUI) {
 
     TempStr cachedName = nullptr;
     CajCacheEntry* e = FindEntryBySrc(srcNorm);
+    bool needsConvert = false;
     if (e) {
-        TempStr candidate = path::JoinTemp(dir, e->cachedName);
+        cachedName = str::DupTemp(e->cachedName);
+        TempStr candidate = path::JoinTemp(dir, cachedName);
         bool stale = (e->srcSize != srcSize || e->srcMTime != srcMTime);
-        if (file::Exists(candidate) && !stale) {
-            cachedName = str::DupTemp(e->cachedName);
+        if (!stale && HasPdfHeader(candidate)) {
             e->lastUse = NowUnixSec();
             gIndexDirty = true;
             logf("EngineCaj: cache hit '%s'\n", candidate);
         } else {
-            cachedName = str::DupTemp(e->cachedName);
+            // the log used to promise "re-converting" and then fell through to a
+            // conversion that was skipped because the old PDF still existed
+            needsConvert = true;
             if (stale) {
-                e->srcSize = srcSize;
-                e->srcMTime = srcMTime;
                 logf("EngineCaj: source changed, re-converting\n");
+            } else {
+                logf("EngineCaj: cached file is not a readable PDF, re-converting\n");
             }
         }
     } else {
         cachedName = MakeCachedNameTemp(path, srcNorm);
         AddEntry(cachedName, srcNorm, srcSize, srcMTime, NowUnixSec());
         e = FindEntryBySrc(srcNorm);
+        needsConvert = true;
         gIndexDirty = true;
     }
 
     TempStr pdfPath = path::JoinTemp(dir, cachedName);
-    if (!file::Exists(pdfPath)) {
-        int rc = caj_convert_file(path, pdfPath);
-        if (rc != 0) {
+    if (needsConvert) {
+        // Convert to a sibling name and rename over the target. Writing straight
+        // onto the final path meant a killed process or a full disk left a half
+        // PDF, and the next open found it via Exists() and never converted again.
+        TempStr tmpPath = str::JoinTemp(pdfPath, ".tmp");
+        file::Delete(tmpPath);
+        int rc = caj_convert_file(path, tmpPath);
+        bool moved = false;
+        if (0 == rc) {
+            moved = MoveFileExW(ToWStrTemp(tmpPath), ToWStrTemp(pdfPath), MOVEFILE_REPLACE_EXISTING);
+            if (!moved) {
+                // usually means another tab still has the old cached PDF open, which
+                // blocks replacing it. Failing here is deliberate: silently keeping the
+                // stale PDF is the bug this path used to have.
+                logf("EngineCaj: could not replace '%s' - close the document that still has it open\n", pdfPath);
+            }
+        }
+        if (!moved) {
             char err[512]{};
             caj_last_error(err, dimof(err));
             logf("EngineCaj: conversion failed (rc %d): %s\n", rc, err);
-            // a half-written cache file is worse than none: the next open would
-            // skip conversion and MuPDF would fail on it
-            file::Delete(pdfPath);
-            if (e) {
-                str::Free(e->cachedName);
-                str::Free(e->srcNorm);
-                for (int i = 0; i < gEntryCount - 1; i++) {
-                    if (&gEntries[i] == e) {
-                        memmove(&gEntries[i], &gEntries[i + 1], sizeof(CajCacheEntry) * (gEntryCount - 1 - i));
-                        gEntryCount--;
-                        break;
-                    }
-                }
-            }
+            file::Delete(tmpPath);
+            RemoveEntry(e);
             gIndexDirty = true;
             return nullptr;
         }
+        // the stamp is only believed once a PDF actually exists: keeping the old
+        // size/mtime on failure would make the entry look up to date forever
+        e->srcSize = srcSize;
+        e->srcMTime = srcMTime;
+        e->lastUse = NowUnixSec();
+        gIndexDirty = true;
         logf("EngineCaj: converted to '%s'\n", pdfPath);
     }
 

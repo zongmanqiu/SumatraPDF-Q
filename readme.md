@@ -1,15 +1,13 @@
 # SumatraPDF-Q — 能直接打开 CAJ 论文的 SumatraPDF 改版
 
-**[⬇️ 下载最新版 3.6.1Q1（Gitee Releases）](https://gitee.com/qiuzongman/SumatraPDF-Q/releases)**
- ｜ **[GitHub Releases（镜像）](https://github.com/zongmanqiu/SumatraPDF-Q/releases)**
+**[⬇️ 下载 3.6.1Q1 (Gitee)](https://gitee.com/qiuzongman/SumatraPDF-Q/releases)**
+ ｜ **[⬇️ 下载 3.6.1Q1 (GitHub)](https://github.com/zongmanqiu/SumatraPDF-Q/releases)**
  ｜ [Gitee 主仓](https://gitee.com/qiuzongman/SumatraPDF-Q)
  ｜ [GitHub 镜像](https://github.com/zongmanqiu/SumatraPDF-Q)
 
-> 下载页里取 `SumatraPDF-Q.exe` 这一个文件即可，**不需要安装、不写注册表**；
-> 配置和缓存都生成在它旁边。
 
-SumatraPDF 3.6.1 的非官方改版，作者**邱宗满**，与官方项目没有隶属关系。只做了两件事，
-其余功能、界面、快捷键全部与官方一致：
+> SumatraPDF 3.6.1 的非官方改版，只做了轻微改动，
+其余功能、界面、快捷键全部与官方一致
 
 **1. 双击就能打开 CAJ（知网私有电子论文格式）**
 
@@ -23,8 +21,6 @@ SumatraPDF 3.6.1 的非官方改版，作者**邱宗满**，与官方项目没�
 
 - 9 个开关：文档以标签页打开、启动时恢复上次文件、记住打开过的文件、新文件交给已运行实例、
   标题栏显示完整路径、平滑滚动、每个文档记住阅读状态、文件改动时自动重载、大文档延迟加载。
-- 判据是硬的：**凡是在菜单、工具栏或鼠标操作上能改的，这里一个都不放**（例如界面主题在
-  「设置 → 主题」里就有）。需要重启才生效的，标签上直接写「（需重启）」。
 
 **另外两条为"改版"必须做的事**
 
@@ -41,14 +37,24 @@ SumatraPDF 3.6.1 的非官方改版，作者**邱宗满**，与官方项目没�
 
 ## 许可
 
-继承上游许可，**不放宽**：
+本改版按 **(A)GPLv3** 分发，沿用上游官方的说法（官方 README 原文："SumatraPDF is a
+... reader for Windows under **(A)GPLv3** license, with some code under BSD license"）。
 
-- 本改版整体按 **GNU GPLv3** 分发，全文见 [COPYING](COPYING)；
-  上游部分工具代码为 Simplified BSD，见 [COPYING.BSD](COPYING.BSD)。
-- 内嵌 MuPDF 为 **AGPLv3**（见 `mupdf/COPYING`），CAJ 解码库
-  [caj2pdf-core](https://github.com/rwv/caj2pdf-rust) 为 **MIT**。
-- 上游全部版权声明与 [AUTHORS](AUTHORS) 原样保留；本改版的署名与仓库地址加在
-  「帮助 → 关于」页里。逐文件的改动清单见 [CHANGES.md](CHANGES.md)。
+- **为什么不是只写 GPL**：我们这个 exe 里静态链接了 **MuPDF，而它是 AGPLv3**（见
+  `mupdf/COPYING`），所以结合作品同时受 AGPLv3 约束，许可要说成 (A)GPLv3。
+- **AGPL 里跟我们没关系的那一半**：AGPL 比 GPL 多出来的只有第 13 条——"用户通过网络与你
+  提供的软件交互"时也要提供源码。SumatraPDF-Q 是本地桌面阅读器，不对外提供网络服务，
+  所以第 13 条不触发。**分发义务（对应源码、许可文本、改动声明）照旧要守**，这一点上
+  AGPL 与 GPL 一样。
+- **不许放宽**：内嵌代码是 GPLv3 + AGPLv3，因此改版不能标成 MIT/BSD 这类更宽的许可。
+  我们自己新增的两个源文件（`src/SettingsPage.cpp`、`src/EngineCaj.cpp`）文件头写的就是
+  `License: GPLv3`，与上游一致。
+- 许可全文用仓库里现成的，不另加 `LICENSE` 文件（避免同一个事实出现第二个真源）：
+  [COPYING](COPYING)＝GPLv3 全文；[COPYING.BSD](COPYING.BSD)＝上游部分工具代码的
+  Simplified BSD；[AUTHORS](AUTHORS)＝原作者名单；`mupdf/COPYING`＝AGPLv3。全部原样保留。
+- 第三方组件：CAJ 解码库 [caj2pdf-core](https://github.com/rwv/caj2pdf-rust) 为 MIT，
+  它带进来的 26 个 Rust 依赖逐个核对过 `license` 字段，全是 MIT / Apache-2.0 / 0BSD /
+  Zlib / Unlicense 组合，**没有 copyleft**，只有署名义务。
 
 ## 关于官方原版
 

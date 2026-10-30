@@ -361,6 +361,80 @@ bool CrashHandlerCanUseNet() {
 
 顺带修了账具自己的一个洞：`diff-vs-baseline.py` 原先把「我们新增的文件」等同于「git 未跟踪」，**提交之后那些文件就不再未跟踪了**，于是新文件清单塌成 1 个、上游改动虚报成 23 个（15 改 + 8 新被混在一起）。现改成按 git 的状态字母分流（`A`＝新增、`M/D`＝改了上游），并把「上次提交之后新建、还没跟踪」的文件从 `git status` 并进来——只靠提交顺序才全的清单，就是一张会静默漏东西的清单。
 
+## 七、审计项的修复（m11 的 R1 / R2 / R3 / R4 / R5，2026-10-30）
+
+### 28. R1 选项页重入崩溃：状态跟着窗口走，并只允许一个页面
+
+`src/SettingsPage.cpp`：
+
+- `PageProc` 不再从全局 `gPage` 取状态。`WM_NCCREATE` 里把 `CREATESTRUCTW::lpCreateParams`
+  存进 `GWLP_USERDATA`，之后每个消息都从窗口自己拿；`CreateWindowExW` 的最后一参数由
+  `nullptr` 改成 `&page`。取不到状态时走 `DefWindowProcW`，不再解引用。
+- `ShowSettingsPageDialog()` 入口加单例闸：已有页面就 `SetForegroundWindow` 那个页面并返回
+  `IDCANCEL`——**`gPage` 现在是"是否已有页面"的门闩，不再是消息处理的真源**。
+- `SetFocus(page.rows[0].ctrl)` 加了 `rowCount > 0` 保护（上游改名导致 9 项全解析不了时，
+  原来会把焦点设到 `NULL`）。
+- `GetMessageW` 返回 0/-1 的退出路径补 `DestroyWindow`，不再留下没人拥有的页面窗口。
+
+**先红后绿**（`.plan/tools/test-r1-reentry.ps1`）：判据不用"真去点出崩溃"（不想赌 Windows
+会不会弹错误对话框），改成数窗口——`Ctrl+N` 开第二主窗口后在两个窗口各发一次 `WM_COMMAND 319`，
+**断言「选项」窗口必须恰好 1 个**。未修的 exe 上跑：`2 个` → FAIL；修完：`1 个` → PASS。
+多主窗口这条路是合法功能（`CmdNewWindow=242` 在菜单里），测试第 2 步就断言它能开出 2 个主窗口。
+
+### 29. R2/R3/R4/R5 CAJ 缓存：四件事一起修
+
+`src/EngineCaj.cpp`：
+
+- **R2 源文件变了要真重转**：命中判断从"`Exists` 且不 stale"改成"**且头部真是 `%PDF-`**"；
+  否则置 `needsConvert`。旧代码记了 `re-converting` 日志却因为旧 PDF 还在而跳过转换，
+  并且**先把新的 size/mtime 写进清单**，于是这条缓存自洽地永久错误。
+- **R4 不许留下半截产物**：转换写到 `<name>.pdf.tmp`，成功后 `MoveFileExW(..., MOVEFILE_REPLACE_EXISTING)`
+  原子替换；转换前 `file::Delete(tmpPath)` 自愈上次中断留下的临时名；孤儿回收的匹配串从
+  `%s\*.pdf` 改成 `%s\*.pdf*`，把 `.pdf.tmp` 也纳进来。
+  **代价明写**：若旧标签页还开着那个缓存 PDF，替换会失败 → 现在返回"打不开"并记一条
+  能行动的日志（"关掉还开着它的文档"），**而不是像旧版那样静默给你看旧内容**。
+  另外头部检查只挡得住"头都被写坏"的旧残留；头完好但 xref 断的旧残留仍会失败一次由 MuPDF 报错，
+  不做自愈（要 fz 试开才能判，成本与复杂度都上不去，判废）。
+- **R3 失败清理不许漏最后一个条目**：新增 `RemoveEntry()`，循环上界 `i < gEntryCount`（含末元素），
+  **确认能摘掉之后才 `str::Free` 两个字符串**（旧代码先 free 再用 `i < gEntryCount - 1` 查找，
+  而新文件失败时它恰好是最后一个 → 悬垂条目留在数组里，下次 `str::EqI(srcNorm)` 就是读已释放内存）。
+  清单里的 size/mtime 只在转换真成功后才写。
+- **R5 清单是不可信输入**：装载时 `IsBareCacheName()` 拒绝含 `/ \ : TAB CR LF`、`..`、超 200 字节的行，
+  记一条 `ignoring malformed index line`；写侧 `SafeBaseTemp()` 把基名里的 TAB/CR/LF 折成 `_`
+  并按 **UTF-8 序列**截断到 60 个字符（不再制造解析歧义，也不再让超长名把转换推向失败路径）。
+
+### 30. 我自己改出来的新缺陷，被 T1 逮住（必须记）
+
+`SafeBaseTemp` 第一版逐字符走 UTF-8 时只 `AppendChar` 了序列的**第一个字节**，于是每个汉字被截成
+半个序列 → 中文 `.caj` 的缓存名变成非法 UTF-8 → Rust 侧回 `path is not valid UTF-8`，
+**用户样本（中文名）从此打不开**。改法是整段 `Append(p, len)`。
+
+- 抓它的是 `T1`（用 `.ex` 那个中文原件）。`T6/T7/T8/T9` 全绿是因为我把副本起名 `src6.caj`/`aa.caj`
+  ——**纯 ASCII 夹具把这一类缺陷整个遮住了**。所以现在 T6/T7 的副本改用中文文件名（`样本六.caj`、`样本七.caj`），
+  非 ASCII 不再只靠一条测试覆盖。
+- 读到的日志：`EngineCaj: conversion failed (rc 3): path is not valid UTF-8`。修完 T1-T9 全绿。
+
+### 31. 夹具文件被一次脚本编辑改坏（过程账，别再犯）
+
+往 `test-m08-caj-cache.py` 追加 T6-T9 之后，我用一条带 `re.S` 的正则去替换"index 写入行"，
+它从 T3 那行一路匹配到尾部 T8 的 `c8`，**把 T4/T5/T6/T7 整段吞掉**（约 40 行），而 `.plan` 不在
+版本控制里，无法回滚。结果是重建了整份夹具。
+教训落成两条动作：① 改这类文件前先复制快照（本次已把重建版存为 `.temp/test-m08-snapshot.py`）；
+② 替换后必须与快照逐行比对"删了哪几行"，而不是只看能否 `py_compile` 通过——它编译得过了，
+吞掉的测试却一声不响。**一条编译通过的夹具被删了四格，绿灯照样全亮。**
+
+### 32. m09 标题栏高度：机制读到了，数字还没量
+
+`GetTabbarHeight()`（`src/Tabs.cpp:51-59`）= `max(DpiScale(kTabBarDy=24), 字体高+2) × factor`
+（常量在 `src/wingui/WinGui.h:678`），而 `SumatraPDF.cpp:3691` / `Caption.cpp:703` 把这个值**当作
+custom caption 的高度**用。也就是说标签条的高度是由"我们自己的常量与字体"推出来的，
+**全程没有问过 DWM 标题区实际多高**，而系统的最小化/最大化/关闭按钮画在 DWM 那条带子里——
+两边不相等时就是用户看到的"标签比右边按钮矮"。上游同码，所以官方也有。
+本轮没量成：`DwmGetWindowAttribute(DWMWA_CAPTION_HEIGHT)` 从外部进程对别人的窗口一律返回
+`E_INVALIDARG`（我试了 Shell_TrayWnd / CabinetWClass / Progman 全失败）。要拿到真数只能在**我们自己的
+进程里对 `win->hwndFrame` 打一行日志**（需要一次带插桩的构建），改法是把 caption 高度取
+`max(GetTabbarHeight(), DWM caption 高)`，且必须三档 DPI 都由你看像素。所以这条留在 m09，不盲改。
+
 ## 已知未完成（不是缺陷清单，是下一轮的活）
 6. ~~关于页「邱宗满」能否出墨~~ **已验收**（用户 2026-10-30 目测：正常）。Arial Black 本身无中日韩字形，实测由 GDI 字体链接画出；我的离屏探针两次不可信，已记入原因，不要再为此改那行字体。
 
