@@ -14,10 +14,11 @@
    string"). The base number stays 3.6.1 so it is always visible which upstream
    release this fork is cut from; Q1, Q2, ... are our own revisions.
    Kept token-safe: the macro is pasted directly after CURR_VERSION, so it must
-   not start with punctuation. RELEASES.md must carry the same revision and
-   .plan/tools/check-release-version.py enforces that. */
+   not start with punctuation. HISTORY.md must carry the same revision and
+   tools/check-release-version.py enforces that (it also checks MODIFICATIONS.md
+   and readme.md state it). */
 #ifndef VER_QUALIFIER
-#define VER_QUALIFIER Q2
+#define VER_QUALIFIER Q3
 #endif
 
 // this is sth. like "3.5"

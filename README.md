@@ -1,7 +1,7 @@
 # SumatraPDF-Q — 能直接打开 CAJ 论文的 SumatraPDF 改版
 
-**[⬇️ 下载 3.6.1Q2 (Gitee)](https://gitee.com/qiuzongman/SumatraPDF-Q/releases/download/3.6.1Q2/SumatraPDF-Q_3.6.1Q2.zip)**
- ｜ **[⬇️ 下载 3.6.1Q2 (GitHub)](https://github.com/zongmanqiu/SumatraPDF-Q/releases/download/3.6.1Q2/SumatraPDF-Q_3.6.1Q2.zip)**
+**[⬇️ 下载 3.6.1Q3 (Gitee)](https://gitee.com/qiuzongman/SumatraPDF-Q/releases/download/3.6.1Q3/SumatraPDF-Q_3.6.1Q3.zip)**
+ ｜ **[⬇️ 下载 3.6.1Q3 (GitHub)](https://github.com/zongmanqiu/SumatraPDF-Q/releases/download/3.6.1Q3/SumatraPDF-Q_3.6.1Q3.zip)**
  ｜ [Gitee 主仓](https://gitee.com/qiuzongman/SumatraPDF-Q)
  ｜ [GitHub 镜像](https://github.com/zongmanqiu/SumatraPDF-Q)
 
@@ -33,8 +33,8 @@
 ## 版本
 
 版本号规则：`<官方基线>Q<修订>`。`3.6.1` 表示切自官方 **3.6.1rel**（[上游基线](https://github.com/sumatrapdfreader/sumatrapdf/releases/tag/3.6.1rel)），`Q1` 是我们自己的第 1 个修订
-（因为会在同一官方基线上反复修改，需要一个不掺混的序号）。当前版本 **3.6.1Q2**，
-会显示在「帮助 → 关于」和 exe 属性页里。逐版本记录见 [fork/HISTORY.md](fork/HISTORY.md)。
+（因为会在同一官方基线上反复修改，需要一个不掺混的序号）。当前版本 **3.6.1Q3**，
+会显示在「帮助 → 关于」和 exe 属性页里。逐版本记录见 [HISTORY.md](HISTORY.md)。
 
 ## 文档
 
