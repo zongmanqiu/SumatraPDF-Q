@@ -279,7 +279,7 @@ VALUE "CompanyName",     kPublisherStr       // 保持 Krzysztof Kowalczyk
 - 上游五行（website/manual/forums/programming/licenses）**文本与 URL 都没动**，只追加。`{"author", ..., nullptr}` 的 `nullptr` 让该行不走链接分支（`:290` `hasUrl = CanAccessDisk() && el->url`）⇒ 不上色不加下划线，正是「作者名」该有的样子（先例是上游自己的 `{"a note", "Pre-release version...", nullptr}`）。
 - 尺寸不用手工调：`minRect.dy` 按行数累加（`:373-377`），宽由最左/最右文本量出（`:367`）⇒ 三行自动长高加宽。
 - **`HomePage.cpp` 从此必须带 `/utf-8`**：这文件原本是**纯 ASCII**（实测 non-ascii 字节数 0），加了中文就必须给该文件加 `/utf-8`（`vs2022/SumatraPDF.vcxproj` 的 `ClCompile HomePage.cpp` 条目），否则就是 14 号那条坑的重演。写入过程中我自己踩了一次转义层：python 里写 `b'é±'` 这类字节转义被解成码点再按 UTF-8 编码，落盘成了 `c3a9 c282 c2b1…` 的双编码串——当场用字节级替换修回并核对（现在文件里是 `e982b1 e5ae97 e6bba1`，9 个非 ASCII 字节，CRLF 1082、无混合行尾、无 BOM）。
-- **未验证的一格（明写）**：关于页右列字体是 **`Arial Black`**、左列是 `Arial`（`src/HomePage.h:8-11`），两者都不含中日韩字形。「邱宗满」在这条绘制路径上能否出墨（靠 GDI 字体链接还是出方块），**我没测出来**：先写的离屏 GDI 探针因为 P/Invoke 按 ANSI 序列化把中文先 GBK 了一遍，加上 `CharSet.Unicode` 后连 SimSun 那格也读回 0px，两次都不可信，已删除弃用。选项页的中文能显示不能当作证据——那里走的是 `GetAppFont()`，是另一条路径。**这一格由你在屏幕上判**：如果是方块，退路两条——作者名改拉丁 `Qiu Zongman`，或让这一行单独用 `GetAppFont()`。
+- **这一格当时标为未验证，现已验收**（用户 2026-10-30 目测「很正常」）：关于页右列字体是 **`Arial Black`**、左列是 `Arial`（`src/HomePage.h:8-11`），两者本身都不含中日韩字形，「邱宗满」靠 GDI 的字体链接画出来了。我先前那两次离屏探针不可信（第一版被 P/Invoke 的 ANSI 序列化把中文先 GBK 了一遍；加 `CharSet.Unicode` 后连 SimSun 对照格也读回 0px）——**是量具有问题，不是产品有问题**，选项页能显示也确实不能当作这条路径的证据，最终结论来自像素。
 
 ### 22. 本轮的偏离面变化（机器读数）
 
@@ -342,7 +342,7 @@ bool CrashHandlerCanUseNet() {
 顺带修了账具自己的一个洞：`diff-vs-baseline.py` 原先把「我们新增的文件」等同于「git 未跟踪」，**提交之后那些文件就不再未跟踪了**，于是新文件清单塌成 1 个、上游改动虚报成 23 个（15 改 + 8 新被混在一起）。现改成按 git 的状态字母分流（`A`＝新增、`M/D`＝改了上游），并把「上次提交之后新建、还没跟踪」的文件从 `git status` 并进来——只靠提交顺序才全的清单，就是一张会静默漏东西的清单。
 
 ## 已知未完成（不是缺陷清单，是下一轮的活）
-6. 关于页的「邱宗满」能否出墨**未测**：右列字体是 `Arial Black`（`src/HomePage.h:10`），本身无中日韩字形，全靠 GDI 字体链接。离屏探针两次不可信（P/Invoke 默认 ANSI 序列化 + 连 SimSun 对照格也读回 0px）已删除。看像素判定；若是方块，退路＝作者名改拉丁 `Qiu Zongman`，或该行单独走 `GetAppFont()`。
+6. ~~关于页「邱宗满」能否出墨~~ **已验收**（用户 2026-10-30 目测：正常）。Arial Black 本身无中日韩字形，实测由 GDI 字体链接画出；我的离屏探针两次不可信，已记入原因，不要再为此改那行字体。
 
 1. 转换失败时用户看到的是通用「不支持」，不是 `caj_last_error` 那句带字节偏移的定位信息。
 2. `.kdh` / `.nh` / `.c8` 未注册（上游矩阵里它们是 experimental）。
