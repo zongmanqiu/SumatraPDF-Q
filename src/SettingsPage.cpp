@@ -23,6 +23,7 @@
 #include "AppSettings.h"
 #include "GlobalPrefs.h"
 #include "SettingsPage.h"
+#include "Theme.h"
 
 enum class CtlKind { Check, Edit };
 
@@ -192,6 +193,12 @@ struct PageRow {
 
 struct SettingsPage {
     HWND hwnd = nullptr;
+    // the option area is painted with the document-side colours, not the system
+    // button face: ThemeMainWindowBackgroundColor() is exactly the colour shown
+    // behind/around a page, and it honours the MainWindowBackground pref
+    HBRUSH bgBrush = nullptr;
+    COLORREF bgCol = 0;
+    COLORREF textCol = 0;
     PageRow rows[dimof(gDescs)];
     int rowCount = 0;
     bool dirty = false;
@@ -342,6 +349,12 @@ static LRESULT CALLBACK PageProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     switch (msg) {
         case WM_CREATE: {
             sp->hwnd = hwnd;
+            sp->bgCol = ThemeMainWindowBackgroundColor();
+            sp->textCol = ThemeWindowTextColor();
+            sp->bgBrush = CreateSolidBrush(sp->bgCol);
+            logf("SettingsPage: bg=#%02x%02x%02x text=#%02x%02x%02x\n", GetRValue(sp->bgCol),
+                 GetGValue(sp->bgCol), GetBValue(sp->bgCol), GetRValue(sp->textCol), GetGValue(sp->textCol),
+                 GetBValue(sp->textCol));
             HINSTANCE inst = GetModuleHandle(nullptr);
             HFONT font = GetAppFont();
             BuildRows(sp);
@@ -379,18 +392,27 @@ static LRESULT CALLBACK PageProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         case WM_CLOSE:
             FinishPage(sp, IDCANCEL);
             return 0;
+        case WM_DESTROY:
+            if (sp->bgBrush) {
+                DeleteObject(sp->bgBrush);
+                sp->bgBrush = nullptr;
+            }
+            return 0;
         case WM_ERASEBKGND: {
             HDC dc = (HDC)wp;
             RECT rc{};
             GetClientRect(hwnd, &rc);
-            FillRect(dc, &rc, GetSysColorBrush(COLOR_BTNFACE));
+            FillRect(dc, &rc, sp->bgBrush ? sp->bgBrush : GetSysColorBrush(COLOR_BTNFACE));
             return 1;
         }
-        case WM_CTLCOLORSTATIC: {
+        case WM_CTLCOLORSTATIC:
+        case WM_CTLCOLORBTN: {
             HDC dc = (HDC)wp;
             SetBkMode(dc, TRANSPARENT);
+            SetTextColor(dc, sp->textCol);
+            SetBkColor(dc, sp->bgCol);
             // a NULL_BRUSH here leaves the previous pixels showing through
-            return (LRESULT)GetSysColorBrush(COLOR_BTNFACE);
+            return (LRESULT)(sp->bgBrush ? sp->bgBrush : GetSysColorBrush(COLOR_BTNFACE));
         }
         default:
             return DefWindowProcW(hwnd, msg, wp, lp);
@@ -406,7 +428,7 @@ int ShowSettingsPageDialog(HWND parent) {
         wc.lpfnWndProc = PageProc;
         wc.hInstance = GetModuleHandle(nullptr);
         wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-        wc.hbrBackground = GetSysColorBrush(COLOR_BTNFACE);
+        wc.hbrBackground = nullptr;
         wc.lpszClassName = kPageClass;
         if (!RegisterClassExW(&wc)) {
             logf("SettingsPage: RegisterClassEx failed\n");

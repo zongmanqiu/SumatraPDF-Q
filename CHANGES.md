@@ -502,6 +502,86 @@ SysTabControl32（标签条）    : y=14..38 高 24          -> 标签中心 26
 高 DPI（150%/200%）下 `GetTabbarHeight` 与 DWM 带高的相对关系会不会再挤出不对称，
 量具能跑（把窗口放到对应缩放的屏上即可），但**外观的最终判定还是像素**，见下。
 
+### 38. 顶部边框不能拖动缩放（用户发现我上一轮的对齐改动把它吃掉了）
+
+用户一句「多标签时顶部边框线无法拖动缩放，应该是我们改导致的」——**是对的**。
+`CustomCaptionFrameProc` 里那条 `if (pt.y < rCaption.y) return HTTOP;` 靠的是"caption 带从
+`frameThickness` 开始，带子上方天然留 8px 给 frame"。我把带子提到 DWM 按钮带的顶部（这台机器是 0）
+之后，那个条件永远不成立 ⇒ 顶部整条变成"拖窗口"而不是"拖边线"。
+
+两处必须一起改：
+- `src/Caption.h` 新增 `#define kTopResizeGrabDy 8` 与 `int GetTopResizeGrabDy(int bandDy)`；
+  frame 命中测试改成「带子顶部 `min(8, max(4, bandDy/3))` 行返回 HTTOP」，且只在
+  `!IsIconic && !IsZoomed` 时生效。
+- 标签控件子类化 `TabCtrHitProc`：落在同一深度内的点返回 `HTTRANSPARENT` 让 frame 接手；
+  否则那几行被标签控件当 `HTCLIENT` 吃掉，手柄只剩 0..3px。子类按 hwnd 判断安装
+  （多窗口各有一个标签控件）。两处共用同一个函数，不各写公式。
+
+代价写明：**标签条顶部 8px 归缩放**，点标签、拖标签要用下面那 16px。
+实测：改前"可见顶边 +2px"命中码 2（HTCAPTION，拖的是窗口），改后 depth 2/4/6 全是 12（HTTOP），
+其中 4/6 最深层窗口是 `SysTabControl32` 却仍拿到 12 ⇒ 透传确实在起作用；depth=12 回到 1（HTCLIENT）。
+
+### 39. 那一轮我自己踩的三个坑（都属于"看起来是绿的"）
+
+1. **`HTTOP` 不是 2，是 12**（2 是 `HTCAPTION`）。按印象写常量，让改前的 FAIL 和改后的 PASS
+   都成了假的。常量必须回 SDK `winuser.h` 取——这条我早记过，又忘了一次。
+2. **`WindowFromPoint` 会命中别的进程的窗口。** 这台桌面与并行的其它 AI 会话共用，探针两次落到
+   `Chrome_RenderWidgetHostHWND` 上、读回 1，看起来像"标签吃掉点击"。改成只在我们自己的窗口树里
+   取"包含该点的最小窗口"，再沿 `GetParent` 回溯（遇 `HTTRANSPARENT` 继续问上一层），读数才复现稳定。
+3. **`open(..., newline="` + chr(92) + `"r` + chr(92) + `"n")` 碰上正文里已有的 ` + chr(92) + `"r` + chr(92) + `"n` 会产出两个 CR。**
+   `newline` 在写模式下会把每个 LF 再翻译一次。`Caption.h` 被判成"Mac 文件格式"（C4335，警告即错误）
+   才暴露，而我"数 CRLF 与 bare-LF"的检查看不见它（` + chr(92) + `"r` + chr(92) + `"r` + chr(92) + `"n` 里仍含一次 CRLF）。
+   检查项必须数"多余 CR = CR 总数 − CRLF 总数"。更糟的是我第一版"修复"用 ` + chr(92) + `"r+` 折叠，把
+   ` + chr(92) + `"r` + chr(92) + `"r` + chr(92) + `"n` 变成了两个换行、行数翻倍，最后回退到 HEAD 版按字节折叠才弄干净
+   ——**HISTORY.md 从上一次提交起就整份带着这个病**。
+4. 附两条工具性小坑：探针脚本 `foreach` 抛异常却仍打印 `RESULT: PASS`（已加
+   `$ErrorActionPreference = "Stop"`）；PowerShell 里 `@($a + 4, $a + 6)` 会被逗号优先级咬，
+   判据要写成独立语句。
+
+### 40. 最大化时标题栏被截断（用户第三次指出我改出来的问题，方向又对了）
+
+用户：「最大化时顶部标题栏高度不对，有点小……是不是减少顶部空间导致的？减少底部空间说不定更好。」
+量出来正是：**最大化时标签条顶边在屏幕外 5px**（带子 `-8..22`，标签居中得 `y=-5..19`），
+可见高度只剩 19px 所以看着"矮"。根因：**最大化窗口矩形向屏幕每边外扩
+`SM_CYFRAME+SM_CXPADDEDBORDER`(8px)**，DWM 给的带子顶就在那块出屏区域里——
+"照抄 DWM 带顶"在非最大化时是对的，最大化就翻车。
+
+改法正是用户指的方向：不减顶部，而是让带子从**可见顶边**起算，且最大化不需要缩放手柄：
+
+```c
+if (IsZoomed(hwndFrame)) {
+    int frameThickness = GetSystemMetrics(SM_CYFRAME) + GetSystemMetrics(SM_CXPADDEDBORDER);
+    top = std::max(top, frameThickness);   // 从可见顶边开始，不再往屏幕外去
+    dy  = GetTabbarHeight(hwndFrame);      // 一行标签高，带内不留空隙
+}
+```
+
+实测：最大化态标签条 `0..24`（**裁切 0px**），可见按钮带 `0..22` ⇒ 中心差 **1px**；
+非最大化态不变（中心差 0、上 3 / 下 3、顶边 2/4/6px 仍是 HTTOP）。
+判据自己也误报过一次：第一版拿**未裁剪**的带子算中心，报"差 5px"——量的是一条肉眼看不见的边；
+改成先把按钮带与工作区顶边取 max 再算中心，读数才与眼睛一致。
+
+### 41. 选项页背景改走主题参数（用户：这些颜色都该有参数控制）
+
+`src/SettingsPage.cpp` 里 `COLOR_BTNFACE` 全部换成主题色：
+
+- `bgCol = ThemeMainWindowBackgroundColor()`（正是 PDF 外围那层；Light 主题下它还尊重
+  `MainWindowBackground` 这个 pref）、`textCol = ThemeWindowTextColor()`；
+- `WM_ERASEBKGND` 用 `CreateSolidBrush(bgCol)`；`WM_CTLCOLORSTATIC` 与 **`WM_CTLCOLORBTN`** 一起处理
+  （只管 STATIC 的话勾选框那侧留旧灰），`SetBkMode(TRANSPARENT)` + `SetTextColor`；
+- 画刷 `WM_CREATE` 建、`WM_DESTROY` 释放；窗口类 `hbrBackground` 改 `nullptr`（背景自己擦）；
+- 日志加一行 `SettingsPage: bg=#rrggbb text=#rrggbb`，让"用了哪个色"有机器记录。
+
+判据不是"比系统灰好看"，而是**改参数读数必须跟着变**：新门禁
+`.plan/tools/test-options-theme-colors.ps1` 起三次真程序量那一行日志，实跑
+Light 默认 `#f2f2f2`、设 `MainWindowBackground = #ffff00aa` → `#ff00aa`、`Theme = Dark` → `#000000`；
+断言"B 必须等于 ff00aa"、"A != B"、"Dark 亮度 < 128"、"C != A"。
+Light 主题下差别看着不明显是因为 `#f2f2f2` 与系统灰 `#f0f0f0` 只差两档，**真正的差别在 Dark**（原来灰底黑字，现在黑底）。
+
+写判据时又踩一次自己的坑：先前在 verifier 里比"是不是系统按钮灰"，`Add-Type` 写在使用之后
+⇒ 读数是空串、比较恒成立，又是一枚**恒真的假判据**，已删，交给上面那枚三态门禁。
+另一条 PowerShell 坑：函数里 `Write-Output` 的说明文字会**混进返回值**（拿到的是数组），要用 `Write-Host`。
+
 ## 已知未完成（不是缺陷清单，是下一轮的活）
 6. ~~关于页「邱宗满」能否出墨~~ **已验收**（用户 2026-10-30 目测：正常）。Arial Black 本身无中日韩字形，实测由 GDI 字体链接画出；我的离屏探针两次不可信，已记入原因，不要再为此改那行字体。
 

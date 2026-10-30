@@ -442,6 +442,17 @@ void GetCaptionBand(HWND hwndFrame, int* topOut, int* dyOut) {
         // without DWM we draw the caption buttons ourselves and position them by hand
         top = 0;
     }
+    if (IsZoomed(hwndFrame)) {
+        // A maximized window's rect reaches frameThickness pixels past each monitor
+        // edge, so the band DWM reports starts off-screen. Following it literally
+        // clipped the top rows of the tab strip (measured: 5 px cut off) - the strip
+        // looked "centred" only because it was centred on a band that is partly
+        // outside the screen. When maximized there is no top resize grip to serve
+        // either, so the band can and must start at the visible edge.
+        int frameThickness = GetSystemMetrics(SM_CYFRAME) + GetSystemMetrics(SM_CXPADDEDBORDER);
+        top = std::max(top, frameThickness);
+        dy = GetTabbarHeight(hwndFrame);
+    }
     if (topOut) {
         *topOut = top;
     }
