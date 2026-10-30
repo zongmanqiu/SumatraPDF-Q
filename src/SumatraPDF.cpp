@@ -3682,13 +3682,13 @@ static void RelayoutFrame(MainWindow* win, bool updateToolbars = true, int sideb
     // Tabbar and toolbar at the top
     if (!win->presentation && !win->isFullScreen) {
         if (win->tabsInTitlebar) {
+            int bandTop = 0;
+            int captionHeight = 0;
+            GetCaptionBand(win->hwndFrame, &bandTop, &captionHeight);
             if (dwm::IsCompositionEnabled()) {
-                int frameThickness = GetSystemMetrics(SM_CYFRAME) + GetSystemMetrics(SM_CXPADDEDBORDER);
-                rc.y += frameThickness;
-                rc.dy -= frameThickness;
+                rc.y += bandTop;
+                rc.dy -= bandTop;
             }
-            float scale = IsZoomed(win->hwndFrame) ? 1.f : kCaptionTabBarDyFactor;
-            int captionHeight = GetTabbarHeight(win->hwndFrame, scale);
             if (updateToolbars) {
                 int captionWidth;
                 RECT capButtons;

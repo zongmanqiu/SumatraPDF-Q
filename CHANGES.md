@@ -435,6 +435,73 @@ custom caption 的高度**用。也就是说标签条的高度是由"我们自�
 进程里对 `win->hwndFrame` 打一行日志**（需要一次带插桩的构建），改法是把 caption 高度取
 `max(GetTabbarHeight(), DWM caption 高)`，且必须三档 DPI 都由你看像素。所以这条留在 m09，不盲改。
 
+## 八、m09：标签条与标题栏按钮垂直对齐（用户点名要改的那一条，2026-10-30）
+
+用户给的形状是两条：**每个标签页距离顶部边框线都有很大间隔**、**标签页和标题栏右侧的按钮没有在垂直方向上对齐**。
+这条以前挂在账上是因为我坚持"没有真实读数不动外观"。这次先把量具做出来，再改。
+
+### 33. 缺陷的真实数字（`.plan/tools/test-m09-caption-align.ps1`）
+
+在同一份**未修**的构建上量（96 DPI，两个文档打开使标签条可见）：
+
+```
+frame                       : 顶边在 0
+DWMWA_CAPTION_BUTTON_BOUNDS : top=0  bottom=30        -> 按钮中心 15
+CustomCaption               : y=8..38  高 30
+SysTabControl32（标签条）    : y=14..38 高 24          -> 标签中心 26
+带内余量                     : 上 6 px / 下 0 px
+```
+
+⇒ 中心差 **11 px**，顶边差 **14 px**，空隙全压在标签头顶（贴底对齐）。用户说的"很大间隔"就是那 6+8。
+
+### 34. 根因是两个猜测叠在一起，而真值就在手边
+
+1. **带高是猜的**：`kCaptionTabBarDyFactor = 1.25f`（`src/Caption.h:5`）把 caption 带定成 `24 × 1.25 = 30`；
+   而 DWM 报回来的按钮带正好是 30——**猜对了高度，但没猜位置**。
+2. **位置也是猜的**：`RelayoutFrame`（原 `SumatraPDF.cpp:3685-3691`）把带子放在 `rc.y += SM_CYFRAME + SM_CXPADDEDBORDER`（= 8），
+   而按钮带其实从 **0** 开始 ⇒ 整体低 8px。
+3. **带内还贴底**：`RelayoutCaption`（`Caption.cpp`）用 `rc.y += rc.dy - tabHeight` ⇒ 6px 空隙全在头顶。
+
+关键事实：**上游在同一个函数里已经调用过 `DWMWA_CAPTION_BUTTON_BOUNDS`**（原 `SumatraPDF.cpp:3695`），
+但只拿它的 `.left` 算宽度、**从没读它的 `.top/.bottom`**。真值一直摆在手边。
+
+另外查证一件事以免走偏：`DWMWA_CAPTION_HEIGHT` **在本机 SDK（10.0.26100.0 `um/dwmapi.h`）里不存在**，
+我第一版探针按记忆用了 34/33，结果读回全 0——那是 `DWMWA_BORDER_COLOR` 与 `DWMWA_WINDOW_CORNER_PREFERENCE`。
+真值 `DWMWA_CAPTION_BUTTON_BOUNDS = 5` 是从头文件的枚举顺序数出来的（我早先记过"SDK 头文件才是准"，这次是被它救的）。
+
+### 35. 改法：位置与高度都听 DWM 的，猜的只做退路
+
+- `src/Caption.h` 新增 `void GetCaptionBand(HWND hwndFrame, int* topOut, int* dyOut);`
+  —— **用出参而不是新 struct**：这项目头文件没有 include guard，而 `SumatraPDF.cpp` 里
+  `Caption.h` 被 **include 了两次**（`:68` 与 `:92`），加类型会撞重定义。声明重复无害，类型重复致命。
+- `src/Caption.cpp` 实现该函数：组合桌面开启时取 DWM 的按钮带（`top`、`bottom-top`，且 **不小于**一行标签高）；
+  DWM 不答复（组合关闭、老系统、返回退化矩形）时退回原来的 `1.25 × GetTabbarHeight` 猜测，
+  组合关闭时 `top = 0`（那条路径自己画按钮，位置本来就归我们管）。
+- 三处消费者统一用它：`RelayoutFrame`（带子的 y 与高）、`Caption.cpp` 的 `WM_SIZE`
+  （DWM 帧扩展的 `margins.top` 与 `extendedFrameHeight`——**必须与布局同一个数**，否则下一次 resize 又错开）、
+  以及 `RelayoutCaption` 里标签条的**带内定位由贴底改为居中**：`rc.y += std::max(0, (rc.dy - tabHeight) / 2)`。
+
+改完实测（96 DPI）：`按钮带 0..30 中心 15；标签条 3..27 中心 15 => 中心差 0 px，带内 上3/下3`。
+**最大化单独量了**（那是旧代码另一条分支 `scale=1.f`）：`按钮带 -8..22 中心 7；标签条 -5..19 中心 7 => 中心差 0`——
+最大化时按钮带真的从负数开始（窗口原点被偏移），旧的"加 8px 边框厚"在这种状态下必然错，现在是跟着 DWM 走。
+
+### 36. 判据的修正过程（记下来，因为它一开始是错的）
+
+我第一版把判据写成两条：中心差 ≤2 **且** 标签顶边 == 按钮带顶边（≤2）。改完后中心差 0 却仍报 FAIL：
+顶边差 3px。原因是**这两条在数学上不可能同时成立**——标签高 24、DWM 带高 30，居中必然上下各留 3px。
+所以正确的两条判据是：**中心对齐（≤2px）** + **带内上下余量对称（差 ≤1px）**；
+后者才是用户那句"头顶一大片空"的本质（旧态是上 6 / 下 0）。
+写判据时要先想清楚它在几何上成不成，不要照着症状的字面话直接翻译成断言。
+
+### 37. 偏离面：15 → 17
+
+新增 `src/Caption.cpp`、`src/Caption.h` 两个上游文件进偏离面（`diff-vs-baseline.py` 与 `.3rd` 的
+`diff -rq` 两来源同读数 17）。`MODIFICATIONS.md` 的清单随之补两行。
+
+**还差用户眼睛确认的**：我只在 **96 DPI（100%）** 量过，也只在 Light 主题、两个标签的状态下量。
+高 DPI（150%/200%）下 `GetTabbarHeight` 与 DWM 带高的相对关系会不会再挤出不对称，
+量具能跑（把窗口放到对应缩放的屏上即可），但**外观的最终判定还是像素**，见下。
+
 ## 已知未完成（不是缺陷清单，是下一轮的活）
 6. ~~关于页「邱宗满」能否出墨~~ **已验收**（用户 2026-10-30 目测：正常）。Arial Black 本身无中日韩字形，实测由 GDI 字体链接画出；我的离屏探针两次不可信，已记入原因，不要再为此改那行字体。
 

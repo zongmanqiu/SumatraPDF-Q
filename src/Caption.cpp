@@ -398,6 +398,31 @@ void RegisterCaptionWndClass() {
     RegisterClassEx(&wcex);
 }
 
+void GetCaptionBand(HWND hwndFrame, int* topOut, int* dyOut) {
+    // fall back to the old guess whenever DWM does not answer (composition off,
+    // older Windows, or a degenerate rect)
+    int top = GetSystemMetrics(SM_CYFRAME) + GetSystemMetrics(SM_CXPADDEDBORDER);
+    int dy = IsZoomed(hwndFrame) ? GetTabbarHeight(hwndFrame) : GetTabbarHeight(hwndFrame, kCaptionTabBarDyFactor);
+    if (dwm::IsCompositionEnabled()) {
+        RECT r{};
+        HRESULT hr = dwm::GetWindowAttribute(hwndFrame, DWMWA_CAPTION_BUTTON_BOUNDS, &r, sizeof(RECT));
+        if (SUCCEEDED(hr) && r.bottom > r.top) {
+            top = r.top;
+            // never shorter than one row of tabs, or the tab strip has nowhere to go
+            dy = std::max((int)(r.bottom - r.top), GetTabbarHeight(hwndFrame));
+        }
+    } else {
+        // without DWM we draw the caption buttons ourselves and position them by hand
+        top = 0;
+    }
+    if (topOut) {
+        *topOut = top;
+    }
+    if (dyOut) {
+        *dyOut = dy;
+    }
+}
+
 void RelayoutCaption(MainWindow* win) {
     Rect rc = ClientRect(win->hwndCaption);
     CaptionInfo* ci = win->caption;
@@ -449,7 +474,9 @@ void RelayoutCaption(MainWindow* win) {
 
     button = &ci->btn[CB_SYSTEM_MENU];
     int tabHeight = GetTabbarHeight(win->hwndFrame);
-    rc.y += rc.dy - tabHeight;
+    // centered in the band, not glued to its bottom: bottom-aligning left the whole
+    // slack above the tabs and put their centre below the caption buttons
+    rc.y += std::max(0, (rc.dy - tabHeight) / 2);
     dh.SetWindowPos(button->hwnd, nullptr, rc.x, rc.y, tabHeight, tabHeight, SWP_NOZORDER);
     button->margins = {0, 0, 0, 0};
 
@@ -690,23 +717,22 @@ LRESULT CustomCaptionFrameProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp, bool* 
             case WM_SIZE:
                 // Extend the translucent frame in the client area.
                 if (wp == SIZE_MAXIMIZED || wp == SIZE_RESTORED) {
-                    int frameThickness = 0;
-                    if (HwndHasFrameThickness(hwnd)) {
-                        frameThickness = GetSystemMetrics(SM_CYFRAME) + GetSystemMetrics(SM_CXPADDEDBORDER);
-                    }
-                    int captionHeight = 0;
+                    // the band we extend the frame over must be the same band the
+                    // layout uses, otherwise the tabs and the buttons drift apart
+                    // on the next resize
+                    int bandBottom = 0;
                     if (HwndHasCaption(hwnd)) {
-                        float tabScale = kCaptionTabBarDyFactor;
-                        if (IsZoomed(hwnd)) {
-                            tabScale = 1.f;
-                        }
-                        captionHeight = GetTabbarHeight(win->hwndFrame, tabScale);
+                        int bandTop = 0;
+                        int bandDy = 0;
+                        GetCaptionBand(win->hwndFrame, &bandTop, &bandDy);
+                        bandBottom = bandTop + bandDy;
+                    } else if (HwndHasFrameThickness(hwnd)) {
+                        bandBottom = GetSystemMetrics(SM_CYFRAME) + GetSystemMetrics(SM_CXPADDEDBORDER);
                     }
-                    int top = frameThickness + captionHeight;
                     int bottom = NeedsNonClientBandHack(hwnd) ? NON_CLIENT_BAND : 0;
-                    MARGINS margins = {0, 0, top, bottom};
+                    MARGINS margins = {0, 0, bandBottom, bottom};
                     dwm::ExtendFrameIntoClientArea(hwnd, &margins);
-                    win->extendedFrameHeight = frameThickness + captionHeight;
+                    win->extendedFrameHeight = bandBottom;
                 }
                 break;
 

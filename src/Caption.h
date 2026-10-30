@@ -4,6 +4,15 @@
 // factor by how large the non-maximized caption should be in relation to the tabbar
 #define kCaptionTabBarDyFactor 1.25f
 
+/* The vertical band that the system caption buttons and our in-titlebar tab strip
+   share. Upstream only ever sized it as kCaptionTabBarDyFactor x GetTabbarHeight(),
+   a guess at how tall the system caption is, and put the tabs at the bottom of that
+   guess - which is what makes the tabs sit ~11 px below the caption buttons. DWM
+   reports the real band, so use it when it answers.
+   Out parameters instead of a struct: this header is included twice in one
+   translation unit (SumatraPDF.cpp) and project headers have no include guards. */
+void GetCaptionBand(HWND hwndFrame, int* topOut, int* dyOut);
+
 void CreateCaption(MainWindow* win);
 void RegisterCaptionWndClass();
 LRESULT CustomCaptionFrameProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp, bool* callDef, MainWindow* win);
