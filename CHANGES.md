@@ -627,7 +627,7 @@ sp->textCol = ThemeDocumentColors(sp->bgCol);   // FixedPageUI 的 BackgroundCol
 
 - `CHANGES.md` / `HISTORY.md` / `MODIFICATIONS.md` 从根目录 `git mv` 进 **`fork/`**（git 记为重命名，历史可追）。
 - 7 枚门禁脚本从 `.plan/tools/` 拷入 **`fork/tools/`**（`.plan` 不入库），`baseline-tree.txt` 同步拷入 `fork/`——从此核对门禁本身也在版本控制里，任何机器 clone 下来就能跑。
-- 12 处绝对路径（`E:\tmp\...`）全部换成脚本自定位：py 用 `__file__` 上溯三级，ps1 用 `$PSScriptRoot` 上溯三级；`grep` 复核 0 残留（规则：仓库里不得出现本机路径）。
+- 12 处本机绝对路径全部换成脚本自定位：py 用 `__file__` 上溯三级，ps1 用 `$PSScriptRoot` 上溯三级；`grep` 复核 0 残留（规则：仓库里不得出现本机路径）。
 - 文档交叉链接同步改指 `fork/...`；`readme.md` 增加「文档」一节索引这批文件。
 - `.plan/`（m00–m12 计划文档）**有意留在仓库外**：里面是本机路径和开发过程笔记，不是交付物。
 

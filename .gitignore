@@ -1,0 +1,13 @@
+# Build output directory. `upstream/out` is a local junction/symlink that
+# points at this machine's absolute path (.temp/upstream-out). It must never
+# be committed: it leaks a local absolute path and would pull in gigabytes of
+# intermediate build artifacts. Recreate it locally per AGENTS.md if missing.
+/upstream/out
+
+# Patch / temp backups left by editing tools
+*.orig
+*.rej
+
+# OS / editor noise
+Thumbs.db
+Desktop.ini

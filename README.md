@@ -6,7 +6,7 @@
  ｜ [GitHub 镜像](https://github.com/zongmanqiu/SumatraPDF-Q)
 
 
-> SumatraPDF 3.6.1 的非官方改版，只做了轻微改动，
+> SumatraPDF **3.6.1rel** 的非官方 fork 改版（[上游基线 3.6.1rel](https://github.com/sumatrapdfreader/sumatrapdf/releases/tag/3.6.1rel)），只做了轻微改动，
 其余功能、界面、快捷键全部与官方一致
 
 **1. 双击就能打开 CAJ（知网私有电子论文格式）**
@@ -31,7 +31,7 @@
 
 ## 版本
 
-版本号规则：`<官方基线>Q<修订>`。`3.6.1` 表示切自官方 3.6.1，`Q1` 是我们自己的第 1 个修订
+版本号规则：`<官方基线>Q<修订>`。`3.6.1` 表示切自官方 **3.6.1rel**（[上游基线](https://github.com/sumatrapdfreader/sumatrapdf/releases/tag/3.6.1rel)），`Q1` 是我们自己的第 1 个修订
 （因为会在同一官方基线上反复修改，需要一个不掺混的序号）。当前版本 **3.6.1Q2**，
 会显示在「帮助 → 关于」和 exe 属性页里。逐版本记录见 [fork/HISTORY.md](fork/HISTORY.md)。
 
@@ -72,7 +72,8 @@
 
 ## 关于官方原版
 
-本改版基于官方 [SumatraPDF 3.6.1](https://github.com/sumatrapdfreader/sumatrapdf)。
+本改版是 **SumatraPDF 的 fork**，切自官方 **[3.6.1rel](https://github.com/sumatrapdfreader/sumatrapdf/releases/tag/3.6.1rel)**
+（commit `16c59fde8`，即 mupdf 1.27.0 那一版；我们工作区里的原样上游代码树 `.3rd\sumatrapdf-3.6.1rel` 与该 tag 逐字节一致）。
 官方项目与作者（Krzysztof Kowalczyk 及贡献者）是全部核心功能的来源：
 官网 <https://www.sumatrapdfreader.org>、手册 <https://www.sumatrapdfreader.org/manual>。
 如果你不需要 CAJ、也想用官方最新的 3.7 系列，请直接用官方版。
