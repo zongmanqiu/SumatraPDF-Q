@@ -617,7 +617,32 @@ static void UpdateCheckAsync(UpdateCheckAsyncData* data) {
 // on a background thread and processing the retrieved data on ui thread
 // if autoCheck is true, this is a check *not* triggered by explicit action
 // of the user and therefore will show less UI
+// This fork never ships the official build over itself. A plain `return` at the
+// top of StartAsyncUpdateCheck would make the original body unreachable code,
+// which is a warning and warnings are errors here - so the gate is a variable
+// the optimizer can't fold at the statement level.
+static bool gAllowOfficialUpdateCheck = false;
+
 void StartAsyncUpdateCheck(MainWindow* win, UpdateCheck updateCheckType) {
+    // A fork must not offer to install the official build: that overwrites this
+    // exe and silently drops CAJ opening and the options page. The pref
+    // (checkForUpdates, off by default in this fork) only gates the automatic
+    // path, because ShouldCheckForUpdate() lets UserInitiated through regardless
+    // - so the block belongs here rather than in the pref. Everything below is
+    // left intact so the upstream diff stays a pure insertion.
+    if (!gAllowOfficialUpdateCheck) {
+        if (UpdateCheck::UserInitiated == updateCheckType) {
+            NotificationCreateArgs args;
+            args.hwndParent = win->hwndCanvas;
+            args.msg = "SumatraPDF-Q 不检查官方更新：新版本请到仓库发布页获取";
+            args.warning = true;
+            args.timeoutMs = 10000;
+            ShowNotification(args);
+        }
+        logf("StartAsyncUpdateCheck: disabled in this fork\n");
+        return;
+    }
+
     if (!ShouldCheckForUpdate(updateCheckType)) {
         return;
     }

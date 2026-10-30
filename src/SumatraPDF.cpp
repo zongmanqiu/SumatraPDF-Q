@@ -6657,7 +6657,12 @@ void GetProgramInfo(str::Str& s) {
 }
 
 bool CrashHandlerCanUseNet() {
-    return HasPermission(Perm::InternetAccess);
+    // A fork's crashes belong to the fork. Upstream's crash flow POSTs to
+    // www.sumatrapdfreader.org and downloads PDBs from there, which would blame
+    // upstream for our bugs and fetch symbols for a binary users can't get there.
+    // The .dmp is still written by the exception filter, so a report can be
+    // attached to an issue in our own repository instead.
+    return false;
 }
 
 void ShowCrashHandlerMessage() {

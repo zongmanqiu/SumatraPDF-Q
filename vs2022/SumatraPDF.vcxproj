@@ -1204,7 +1204,9 @@
     <ClCompile Include="..\src\TranslationLangs.cpp" />
     <ClCompile Include="..\src\Translations.cpp" />
     <ClCompile Include="..\src\Uninstaller.cpp" />
-    <ClCompile Include="..\src\UpdateCheck.cpp" />
+    <ClCompile Include="..\src\UpdateCheck.cpp">
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
     <ClCompile Include="..\src\WindowTab.cpp" />
     <ClCompile Include="..\src\mui\Mui.cpp" />
     <ClCompile Include="..\src\mui\TextRender.cpp" />

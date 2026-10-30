@@ -9,6 +9,17 @@
 #define CURR_VERSION_COMMA 3,6,1
 #endif
 
+/* Our fork revision, using the hook above that exists exactly for recompilers
+   ("VER_QUALIFIER allows people who recompile SumatraPDF to add a distinguishing
+   string"). The base number stays 3.6.1 so it is always visible which upstream
+   release this fork is cut from; Q1, Q2, ... are our own revisions.
+   Kept token-safe: the macro is pasted directly after CURR_VERSION, so it must
+   not start with punctuation. RELEASES.md must carry the same revision and
+   .plan/tools/check-release-version.py enforces that. */
+#ifndef VER_QUALIFIER
+#define VER_QUALIFIER Q1
+#endif
+
 // this is sth. like "3.5"
 #define CURR_VERSION_MAJOR_STRA QM(CURR_VERSION)
 

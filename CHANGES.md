@@ -285,7 +285,64 @@ VALUE "CompanyName",     kPublisherStr       // 保持 Krzysztof Kowalczyk
 
 改的上游文件 **10 → 13**（`diff-vs-baseline.py` 的实名读数，不是估的）：本轮新增 `src/Version.h`、`src/SumatraPDF.rc`、`src/HomePage.cpp` 三个。`vs2022/SumatraPDF.vcxproj` 只是同文件里多了一条 `HomePage.cpp` 的 `/utf-8`，不另计数。新文件仍是 8 个。门禁 `diff-vs-baseline.py` 逐个实名核对并把每个基名要求在本文出现。
 
+## 六、自有版本号、版本历史、禁止与官方通信（2026-10-30）
+
+### 23. 版本号用上游留给重编译器的钩子：`src/Version.h` 的 `VER_QUALIFIER`
+
+```c
+#ifndef VER_QUALIFIER
+#define VER_QUALIFIER Q1
+#endif
+```
+
+紧挨在 `CURR_VERSION`/`CURR_VERSION_COMMA` 之后（必须在 `#ifndef PRE_RELEASE_VER` 那段之前，宏是使用点之后才展开不了的）。
+
+- 规则：`3.6.1` 永远指官方基线，`Q1/Q2/...` 是我们在同一基线上反复修改的自有序号 ⇒ 版本串 `3.6.1Q1` 同时回答「切的哪版官方」和「我们改到第几轮」。
+- **这是上游明确为改版准备的机制**（`Version.h` 原注释："VER_QUALIFIER allows people who recompile SumatraPDF to add a distinguishing string"），不是我们发明的格式。
+- 取值必须是**可直接粘贴的记号**：宏走 `QM2(x, y)` → `_QUOTEME(x##y)`，`##` 之前不展开参数，所以只能贴 `Q1` 这类纯字母数字；写成 `-Q1` 或 `"Q1"` 会得到错误的串。这条约束由门禁 `check-release-version.py` 判。
+- **没用 `PRE_RELEASE_VER`**：那条路会把 `UPDATE_CHECK_VER` 改成修订号，并且 `HomePage.cpp` 的条件行会在关于页多出「Pre-release version, for testing only!」——我们不是预发布。
+- 数值型 `FILEVERSION`（`VER_RESOURCE = CURR_VERSION_COMMA,0`）保持 `3.6.1.0`：只改字符串那一层。这样任何按数字比较版本的系统仍视其为 3.6.1 家族，代价是 `Q1` 不进数字位——版本号语义放在字符串里，够用。
+
+### 24. `src/UpdateCheck.cpp:620`：更新检查在本改版里整体关掉
+
+`StartAsyncUpdateCheck()` 顶部插一段闸门，**原逻辑一行没删**（纯插入，升级时 diff 干净）：
+
+```c
+static bool gAllowOfficialUpdateCheck = false;
+
+void StartAsyncUpdateCheck(MainWindow* win, UpdateCheck updateCheckType) {
+    if (!gAllowOfficialUpdateCheck) { ...ShowNotification(...); logf("...: disabled in this fork"); return; }
+    ... 上游原样 ...
+```
+
+- **为什么默认值 `checkForUpdates = false` 不够**（这是本轮的关键发现）：`ShouldCheckForUpdate()` 里有一句 `if (updateCheckType == UpdateCheck::UserInitiated) return true;`（`:190`）——**手动路径完全绕过 pref**。而 `CmdCheckUpdate = 323` 既在菜单里（`Menu.cpp:533`、`:961`）也在命令面板里（`CommandPalette.cpp:89`），所以只改默认值时，用户点一下仍然会被官方 `update-check-rel.txt`（`UpdateCheck.cpp:46`）喂一个官方包，装下来就把 CAJ 和选项页整个抹掉。⇒ 必须封在 `StartAsyncUpdateCheck` 这个两个调用点共同的入口上。
+- **为什么写成变量而不是 `return;`**：直接 `return` 会使其后原代码成为 unreachable code（C4702），本仓警告即错误。变量闸门让语句级常量折叠不发生，原码留在原地。
+- 手动触发时给的是**看得见的回答**（复用上游现成的 `ShowNotification` + `NotificationCreateArgs`，同文件 `:626-634` 就是这套写法），不是一个点了没反应的死菜单项。文案是中文 ⇒ **`UpdateCheck.cpp` 从此必须带 `/utf-8`**（已加进 `.vcxproj`）。
+
+### 25. `src/SumatraPDF.cpp:6659`：崩溃报告不再上传官方
+
+```c
+bool CrashHandlerCanUseNet() {
+    return false;          // 原为 HasPermission(Perm::InternetAccess)
+}
+```
+
+审「还有哪些路径连官方」时挖出来的：`CrashHandler.cpp:36-38` 把崩溃 POST 到 `www.sumatrapdfreader.org/uploadcrash/sumatrapdf-crashes`，`:438` 还从官方下 PDB。而 `InstallCrashHandler(...)` 在**每个非 ASan 构建**里都装（`SumatraStartup.cpp:2113-2118`）。改这个函数的理由：它是上游自己留的网络总闸（`:428` 已有 `!CrashHandlerCanUseNet()` 的跳过分支与日志），且**这个文件本来就在我们的偏离面里**（不用新增文件）。
+**代价要明写**：`SaveCrashInfo(d)` 在 `:447` 位于网络闸门之后，所以关掉网络后那条人类可读的崩溃文本**不再落盘**（`.dmp` 由异常过滤器另行写，仍在）。真要给用户收崩溃报告时，得把 `SaveCrashInfo` 提到闸门之前——那是 `CrashHandler.cpp` 进偏离面的理由，本轮不做。
+
+### 26. 门面文件：`RELEASES.md`（新）与 `readme.md` 顶部 banner
+
+- `RELEASES.md`＝**用户视角**的版本历史（版本号规则、每版做了什么、已知问题、下载与许可）。它和 `CHANGES.md` 不重复：后者是逐文件的偏离账（给维护者/升级用），前者是给下载者看的。
+- `readme.md` 顶部加了 fork banner（连同 24 的 `src/UpdateCheck.cpp`，**上游文件 13 → 15**，`diff-vs-baseline.py` 与对 `.3rd` 的 `diff -rq` 两个来源同读数）。理由：Gitee/GitHub 仓库首页渲染的就是 `readme.md`，不改它，访客进来读到的是官方版介绍与官方下载链接。原内容（徽章、官方介绍、官方链接）整体保留在 banner 之下。
+
+### 27. 三处版本号必须有机器判等：`.plan/tools/check-release-version.py`
+
+`src/Version.h` 的 `VER_QUALIFIER`、`RELEASES.md` 最新条目标题、`readme.md` 首行——三处写的是同一个数，以前只靠注释互指。新门禁逐处读出并判等，另断言 `RELEASES.md` 的「版本对应关系」表里有这一行，以及记号形状合法（24/23 那条粘贴约束）。本轮实跑读数：`Version.h : 基线 3.6.1 + 修订 Q1 => 3.6.1Q1`，三处一致。
+
+顺带修了账具自己的一个洞：`diff-vs-baseline.py` 原先把「我们新增的文件」等同于「git 未跟踪」，**提交之后那些文件就不再未跟踪了**，于是新文件清单塌成 1 个、上游改动虚报成 23 个（15 改 + 8 新被混在一起）。现改成按 git 的状态字母分流（`A`＝新增、`M/D`＝改了上游），并把「上次提交之后新建、还没跟踪」的文件从 `git status` 并进来——只靠提交顺序才全的清单，就是一张会静默漏东西的清单。
+
 ## 已知未完成（不是缺陷清单，是下一轮的活）
+6. 关于页的「邱宗满」能否出墨**未测**：右列字体是 `Arial Black`（`src/HomePage.h:10`），本身无中日韩字形，全靠 GDI 字体链接。离屏探针两次不可信（P/Invoke 默认 ANSI 序列化 + 连 SimSun 对照格也读回 0px）已删除。看像素判定；若是方块，退路＝作者名改拉丁 `Qiu Zongman`，或该行单独走 `GetAppFont()`。
 
 1. 转换失败时用户看到的是通用「不支持」，不是 `caj_last_error` 那句带字节偏移的定位信息。
 2. `.kdh` / `.nh` / `.c8` 未注册（上游矩阵里它们是 experimental）。
