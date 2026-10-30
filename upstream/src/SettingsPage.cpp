@@ -25,16 +25,23 @@
 #include "SettingsPage.h"
 #include "Theme.h"
 
-enum class CtlKind { Check, Edit };
+enum class CtlKind { Check, Edit, Combo };
 
 // when a changed value becomes visible to the user
 enum class ApplyKind { Now, Restart };
+
+struct ComboOption {
+    const char* label;
+    int value;
+};
 
 struct SettingDesc {
     const char* iniName;
     const char* label;
     CtlKind ctl;
     ApplyKind apply;
+    const ComboOption* combo = nullptr;  // only for CtlKind::Combo
+    int comboCount = 0;                  // only for CtlKind::Combo
 };
 
 // Only settings with no other way to reach them belong here. Checked against
@@ -43,6 +50,14 @@ struct SettingDesc {
 // CmdToggleToolbar, sidebar width is a mouse drag, display mode and zoom have
 // View-menu entries for the open document, language has 设置→更改语言.
 // clang-format off
+// CAJ 转换缓存保留天数：0=从不，1/7/30=对应天数（默认 7）
+static const ComboOption kCajCacheOptions[] = {
+    {"从不", 0},
+    {"1天", 1},
+    {"7天", 7},
+    {"30天", 30},
+};
+
 static const SettingDesc gDescs[] = {
     {"UseTabs",                 "文档以标签页打开",       CtlKind::Check, ApplyKind::Restart},
     {"RestoreSession",          "启动时恢复上次文件",     CtlKind::Check, ApplyKind::Restart},
@@ -53,6 +68,7 @@ static const SettingDesc gDescs[] = {
     {"RememberStatePerDocument","每个文档记住阅读状态",   CtlKind::Check, ApplyKind::Now},
     {"ReloadModifiedDocuments", "文件改动时自动重载",     CtlKind::Check, ApplyKind::Now},
     {"LazyLoading",             "大文档延迟加载",         CtlKind::Check, ApplyKind::Restart},
+    {"CajCacheMaxAgeDays",      "CAJ 缓存清理",          CtlKind::Combo, ApplyKind::Now, kCajCacheOptions, dimof(kCajCacheOptions)},
 };
 // clang-format on
 
@@ -134,6 +150,9 @@ static int TextWidthDx(HDC dc, const char* utf8) {
 static int CtrlDxForKind(HWND refHwnd, CtlKind ctl) {
     if (CtlKind::Check == ctl) {
         return DpiScale(refHwnd, 24);
+    }
+    if (CtlKind::Combo == ctl) {
+        return DpiScale(refHwnd, 140);
     }
     return DpiScale(refHwnd, 90);
 }
@@ -261,6 +280,22 @@ static void BuildRows(SettingsPage* sp) {
                                        y, L.ctrlDx, L.rowDy, sp->hwnd, (HMENU)(INT_PTR)id, inst, nullptr);
             bool on = *(bool*)f.base;
             SendMessageW(pr->ctrl, BM_SETCHECK, on ? BST_CHECKED : BST_UNCHECKED, 0);
+        } else if (CtlKind::Combo == d->ctl) {
+            pr->ctrl = CreateWindowExW(WS_EX_CLIENTEDGE, L"COMBOBOX", L"",
+                                       WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST | CBS_HASSTRINGS, ctrlX, y,
+                                       L.ctrlDx, L.rowDy * 6, sp->hwnd, (HMENU)(INT_PTR)id, inst, nullptr);
+            for (int k = 0; k < d->comboCount; k++) {
+                SendMessageW(pr->ctrl, CB_ADDSTRING, 0, (LPARAM)ToWStrTemp(d->combo[k].label));
+            }
+            int cur = *(int*)f.base;
+            int sel = 0;
+            for (int k = 0; k < d->comboCount; k++) {
+                if (d->combo[k].value == cur) {
+                    sel = k;
+                    break;
+                }
+            }
+            SendMessageW(pr->ctrl, CB_SETCURSEL, sel, 0);
         } else {
             pr->ctrl = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
                                        WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL, ctrlX, y, L.ctrlDx, L.rowDy,
@@ -281,6 +316,16 @@ static void CommitRow(SettingsPage* sp, PageRow* pr) {
         bool on = (BST_CHECKED == SendMessageW(pr->ctrl, BM_GETCHECK, 0, 0));
         if (on != *(bool*)f.base) {
             *(bool*)f.base = on;
+            sp->dirty = true;
+        }
+        return;
+    }
+
+    if (CtlKind::Combo == pr->d->ctl) {
+        int idx = (int)SendMessageW(pr->ctrl, CB_GETCURSEL, 0, 0);
+        int v = (idx >= 0 && idx < pr->d->comboCount) ? pr->d->combo[idx].value : 0;
+        if (v != *(int*)f.base) {
+            *(int*)f.base = v;
             sp->dirty = true;
         }
         return;

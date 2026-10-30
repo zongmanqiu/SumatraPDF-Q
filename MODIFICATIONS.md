@@ -22,7 +22,7 @@
 
 
 
-## 改动的上游文件（17 个）
+## 改动的上游文件（19 个）
 
 > 下表与门禁输出里的路径都是**基线相对路径**；在仓库里它们位于 `upstream/` 下
 > （m13b 起，整个上游树收进 `upstream/`；我们的文档与 `tools/` 门禁在仓库根目录）。
@@ -39,7 +39,7 @@
 
 | `src/EngineCreate.cpp` | 两处分支：识别到 CAJ 类型、以及为它创建引擎 | CAJ |
 
-| `src/Settings.h` | **只改两个默认值**：`checkForUpdates`、`restoreSession` 由 true 改 false。没有新增任何配置项 | 便携 |
+| `src/Settings.h` | 默认值改动 **+ 一个新增配置项**：`checkForUpdates`/`restoreSession` 仍由 true 改 false；另新增 `cajCacheMaxAgeDays` 字段与其 `Int` 元数据（默认 7），驱动「CAJ 缓存清理」下拉 | 便携 / CAJ |
 
 | `src/RegistryInstaller.cpp` | 文件关联的支持列表加 `.caj` | CAJ |
 
@@ -61,6 +61,8 @@
 
 | `src/Caption.h`、`src/Caption.cpp` | 新增 `GetCaptionBand()`：标题栏带子的位置与高度改问 DWM（`DWMWA_CAPTION_BUTTON_BOUNDS`），标签条在带内由贴底改为居中 ⇒ 修「多标签时标签比右侧按钮低 11px」 | 外观 |
 | `readme.md` | 整篇换成改版说明（做什么、仓库与下载地址、许可、关于官方原版）；官方链接与作者归属保留在最后一节 | 门面 |
+| `.gitignore` | 排除 `out/`（含 cajshim 的 Rust 静态库，约 1.9 GB）；布局收拢轮新增，排除规则任意深度生效 | 构建 |
+| `vs2022/SumatraPDF-dll.vcxproj` | 与 `SumatraPDF.vcxproj` 同因：含中文的源文件各自带 `/utf-8`，否则 GBK 码页下中文串乱码；dll 工程此前漏补 | 构建 |
 
 
 

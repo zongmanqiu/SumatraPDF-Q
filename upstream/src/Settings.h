@@ -512,6 +512,8 @@ struct GlobalPrefs {
     // week count since 2011-01-01 needed to "age" openCount values in file
     // history
     int openCountWeek;
+    // CAJ cache retention days: 0=never, 1/7/30=days (default 7)
+    int cajCacheMaxAgeDays;
     // modification time of the preferences file when it was last read
     FILETIME lastPrefUpdate;
     // value of DefaultDisplayMode for internal usage
@@ -839,11 +841,12 @@ static const FieldInfo gGlobalPrefsFields[] = {
     {offsetof(GlobalPrefs, reopenOnce), SettingType::StringArray, 0},
     {offsetof(GlobalPrefs, timeOfLastUpdateCheck), SettingType::Compact, (intptr_t)&gFILETIMEInfo},
     {offsetof(GlobalPrefs, openCountWeek), SettingType::Int, 0},
+    {offsetof(GlobalPrefs, cajCacheMaxAgeDays), SettingType::Int, 7},
     {(size_t)-1, SettingType::Comment, 0},
     {(size_t)-1, SettingType::Comment, (intptr_t)"Settings below are not recognized by the current version"},
 };
 static const StructInfo gGlobalPrefsInfo = {
-    sizeof(GlobalPrefs), 78, gGlobalPrefsFields,
+    sizeof(GlobalPrefs), 79, gGlobalPrefsFields,
     "\0\0CheckForUpdates\0CustomScreenDPI\0DefaultDisplayMode\0DefaultZoom\0EnableTeXEnhancements\0EscToExit\0FullPathI"
     "nTitle\0InverseSearchCmdLine\0LazyLoading\0MainWindowBackground\0NoHomeTab\0HomePageSortByFrequentlyRead\0ReloadMo"
     "difiedDocuments\0RememberOpenedFiles\0RememberStatePerDocument\0RestoreSession\0ReuseInstance\0ShowMenubar\0ShowTo"
@@ -852,7 +855,7 @@ static const StructInfo gGlobalPrefsInfo = {
     "ize\0DisableAntiAlias\0UseSysColors\0UseTabs\0ZoomLevels\0ZoomIncrement\0\0FixedPageUI\0\0EBookUI\0\0ComicBookUI\0"
     "\0ChmUI\0\0Annotations\0\0ExternalViewers\0\0ForwardSearch\0\0PrinterDefaults\0\0SelectionHandlers\0\0Shortcuts\0"
     "\0Themes\0\0\0DefaultPasswords\0UiLanguage\0VersionToSkip\0WindowState\0WindowPos\0FileStates\0SessionData\0Reopen"
-    "Once\0TimeOfLastUpdateCheck\0OpenCountWeek\0\0"};
+    "Once\0TimeOfLastUpdateCheck\0OpenCountWeek\0CajCacheMaxAgeDays\0\0"};
 static const FieldInfo gTheme_1_Fields[] = {
     {offsetof(Theme, name), SettingType::String, (intptr_t)""},
     {offsetof(Theme, textColor), SettingType::Color, (intptr_t)""},

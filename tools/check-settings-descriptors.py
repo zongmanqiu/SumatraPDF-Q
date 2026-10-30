@@ -80,7 +80,7 @@ kinds_m = re.search(r"enum class CtlKind\s*\{([^}]*)\}", ptxt)
 if not kinds_m:
     sys.exit("cannot parse 'enum class CtlKind' in SettingsPage.cpp")
 CTL_KINDS = {k.strip() for k in kinds_m.group(1).split(",") if k.strip()}
-STR2NUM = {"Check": {"Bool"}, "Edit": STRINGISH | NUMERIC, "Combo": STRINGISH}
+STR2NUM = {"Check": {"Bool"}, "Edit": STRINGISH | NUMERIC, "Combo": STRINGISH | NUMERIC}
 
 print(f"Settings.h 顶层可命名设置项：{len(schema)}")
 print(f"descriptor 行数：{len(rows)}   页面容量：rows[{capacity}]   控件类型：{'/'.join(sorted(CTL_KINDS))}")

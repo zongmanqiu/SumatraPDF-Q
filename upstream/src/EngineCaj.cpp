@@ -47,8 +47,8 @@ int caj_convert_file(const char* src, const char* dst);
 int caj_last_error(char* buf, int bufLen);
 }
 
-// how long an untouched cached PDF survives before it is dropped again
-static constexpr int kCajCacheMaxAgeDays = 30;
+// how long an untouched cached PDF survives before it is dropped again: now
+// read from GlobalPrefs->cajCacheMaxAgeDays (0 = never clean, 1/7/30 = days)
 static constexpr const char* kCajIndexName = "index.txt";
 
 struct CajCacheEntry {
@@ -290,10 +290,11 @@ static void SweepCajCache(const char* dir) {
     }
     sSwept = true;
 
-    if (kCajCacheMaxAgeDays <= 0) {
+    int maxAgeDays = gGlobalPrefs ? gGlobalPrefs->cajCacheMaxAgeDays : 7;
+    if (maxAgeDays <= 0) {
         return;
     }
-    const u64 minLastUse = NowUnixSec() - (u64)kCajCacheMaxAgeDays * 24 * 3600;
+    const u64 minLastUse = NowUnixSec() - (u64)maxAgeDays * 24 * 3600;
 
     for (int i = gEntryCount - 1; i >= 0; i--) {
         TempStr victim = path::JoinTemp(dir, gEntries[i].cachedName);
@@ -320,7 +321,7 @@ static void SweepCajCache(const char* dir) {
     if (h == INVALID_HANDLE_VALUE) {
         return;
     }
-    u64 cutoff100ns = (u64)kCajCacheMaxAgeDays * 24 * 3600 * 10000000ULL;
+    u64 cutoff100ns = (u64)maxAgeDays * 24 * 3600 * 10000000ULL;
     u64 now100ns = FileTimeToU64([] { FILETIME ft; GetSystemTimeAsFileTime(&ft); return ft; }());
     do {
         if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
