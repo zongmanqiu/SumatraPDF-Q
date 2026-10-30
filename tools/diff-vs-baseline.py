@@ -85,8 +85,9 @@ if os.path.isdir(BASELINE):
     for p in missing:
         print("  missing:", p)
 
-# 3b. root LICENSE must be a verbatim copy of upstream COPYING (m14b): the same
-#     licence fact now lives in two places, so a gate has to keep them identical.
+# 3b. root LICENSE must be a verbatim copy of upstream COPYING, and LICENSE.MuPDF
+#     of upstream mupdf/COPYING (m14b): the same licence facts now live in two
+#     places, so a gate has to keep them identical.
 lic = os.path.join(MAIN, "LICENSE")
 if not os.path.isfile(lic):
     print("FAIL: 根目录缺 LICENSE")
@@ -97,6 +98,16 @@ if lic_b != cpy_b:
     print("FAIL: LICENSE 与 upstream/COPYING 内容不一致")
     sys.exit(1)
 print("OK: LICENSE = upstream/COPYING（逐字一致）")
+licm = os.path.join(MAIN, "LICENSE.MuPDF")
+if not os.path.isfile(licm):
+    print("FAIL: 根目录缺 LICENSE.MuPDF")
+    sys.exit(1)
+licm_b = open(licm, "rb").read()
+mcpy_b = open(os.path.join(BASELINE, "mupdf", "COPYING"), "rb").read()
+if licm_b != mcpy_b:
+    print("FAIL: LICENSE.MuPDF 与 upstream/mupdf/COPYING 内容不一致")
+    sys.exit(1)
+print("OK: LICENSE.MuPDF = upstream/mupdf/COPYING（逐字一致）")
 
 print(f"\n=== 改动的上游文件：{len(changed)} ===")
 for p in sorted(changed):

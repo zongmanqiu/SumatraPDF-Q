@@ -1,7 +1,7 @@
 # SumatraPDF-Q — 能直接打开 CAJ 论文的 SumatraPDF 改版
 
-**[⬇️ 下载 3.6.1Q2 (Gitee)](https://gitee.com/qiuzongman/SumatraPDF-Q/releases)**
- ｜ **[⬇️ 下载 3.6.1Q2 (GitHub)](https://github.com/zongmanqiu/SumatraPDF-Q/releases)**
+**[⬇️ 下载 3.6.1Q2 (Gitee)](https://gitee.com/qiuzongman/SumatraPDF-Q/releases/download/3.6.1Q2/SumatraPDF-Q_3.6.1Q2.zip)**
+ ｜ **[⬇️ 下载 3.6.1Q2 (GitHub)](https://github.com/zongmanqiu/SumatraPDF-Q/releases/download/3.6.1Q2/SumatraPDF-Q_3.6.1Q2.zip)**
  ｜ [Gitee 主仓](https://gitee.com/qiuzongman/SumatraPDF-Q)
  ｜ [GitHub 镜像](https://github.com/zongmanqiu/SumatraPDF-Q)
 
@@ -62,9 +62,10 @@
   我们自己新增的两个源文件（`src/SettingsPage.cpp`、`src/EngineCaj.cpp`）文件头写的就是
   `License: GPLv3`，与上游一致。
 - 许可全文：根目录 [LICENSE](LICENSE)＝GPLv3 全文（与上游 [upstream/COPYING](upstream/COPYING)
-  逐字一致，`tools/diff-vs-baseline.py` 查等，两处不许漂移）；[upstream/COPYING.BSD](upstream/COPYING.BSD)＝
-  上游部分工具代码的 Simplified BSD；[upstream/AUTHORS](upstream/AUTHORS)＝原作者名单；
-  `upstream/mupdf/COPYING`＝AGPLv3。全部原样保留。
+  逐字一致）；[LICENSE.MuPDF](LICENSE.MuPDF)＝AGPLv3 全文（MuPDF 静态链进 exe，随发行附带；
+  与 `upstream/mupdf/COPYING` 逐字一致）。两份都由 `tools/diff-vs-baseline.py` 查等，不许漂移；
+  [upstream/COPYING.BSD](upstream/COPYING.BSD)＝上游部分工具代码的 Simplified BSD；
+  [upstream/AUTHORS](upstream/AUTHORS)＝原作者名单。全部原样保留。
 - 第三方组件：CAJ 解码库 [caj2pdf-core](https://github.com/rwv/caj2pdf-rust) 为 MIT，
   它带进来的 26 个 Rust 依赖逐个核对过 `license` 字段，全是 MIT / Apache-2.0 / 0BSD /
   Zlib / Unlicense 组合，**没有 copyleft**，只有署名义务。

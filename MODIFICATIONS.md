@@ -84,7 +84,7 @@
 
 | `tools/` | `baseline-tree.txt` 基线 tree 快照 + 7 枚核对门禁（脚本自定位仓库根，不含本机路径）；三份文档在仓库根目录 | 门禁 |
 
-| `LICENSE` | GPLv3 全文，与 `upstream/COPYING` 逐字一致（m14b 起由 `tools/diff-vs-baseline.py` 查等；`.build/` 发行夹随 exe 附同一份 + README.md） | 许可 |
+| `LICENSE` / `LICENSE.MuPDF` | GPLv3 全文与 MuPDF 的 AGPLv3 全文，分别与 `upstream/COPYING`、`upstream/mupdf/COPYING` 逐字一致（`tools/diff-vs-baseline.py` 3b 查等；`.build/` 发行夹随 exe 附两份 + README.md） | 许可 |
 
 
 

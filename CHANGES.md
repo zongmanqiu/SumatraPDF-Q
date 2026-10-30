@@ -697,3 +697,13 @@ sp->textCol = ThemeDocumentColors(sp->bgCol);   // FixedPageUI 的 BackgroundCol
   README 许可一节同步改写（旧的「不另加」说法删掉）。
 - **`.build/` 发行夹**＝`SumatraPDF-Q.exe` + `LICENSE` + `README.md` 三件。清掉了测试期留下的
   运行时残留（`SumatraPDF-settings.txt`、`caj-cache/`、`sumatrapdfcache/`，均可再生）。
+### 47. 发行夹补 MuPDF 的 AGPLv3 全文（用户问得对：一份 LICENSE 不够）
+
+用户追问「只要一份 License 吗？mupdf 还有 AGPL」。对——应用本体是 GPLv3，但 **MuPDF 是 AGPLv3
+且静态链进了同一个 exe**，分发（convey）时它的许可全文就该随行。落法与 46 同款：
+
+- 根目录 `LICENSE.MuPDF`＝`upstream/mupdf/COPYING`（AGPLv3 全文 34,520 字节）逐字副本，
+  `tools/diff-vs-baseline.py` 3b 节同样查等。
+- `.build/` 四件：`SumatraPDF-Q.exe` + `LICENSE` + `LICENSE.MuPDF` + `README.md`。
+- README 许可一节同步。Rust 侧 26 个 crate 全 permissive（无 copyleft，只有署名义务），
+  署名说明在 README 第三方一节，不另发文件。
