@@ -330,14 +330,34 @@ bool CrashHandlerCanUseNet() {
 审「还有哪些路径连官方」时挖出来的：`CrashHandler.cpp:36-38` 把崩溃 POST 到 `www.sumatrapdfreader.org/uploadcrash/sumatrapdf-crashes`，`:438` 还从官方下 PDB。而 `InstallCrashHandler(...)` 在**每个非 ASan 构建**里都装（`SumatraStartup.cpp:2113-2118`）。改这个函数的理由：它是上游自己留的网络总闸（`:428` 已有 `!CrashHandlerCanUseNet()` 的跳过分支与日志），且**这个文件本来就在我们的偏离面里**（不用新增文件）。
 **代价要明写**：`SaveCrashInfo(d)` 在 `:447` 位于网络闸门之后，所以关掉网络后那条人类可读的崩溃文本**不再落盘**（`.dmp` 由异常过滤器另行写，仍在）。真要给用户收崩溃报告时，得把 `SaveCrashInfo` 提到闸门之前——那是 `CrashHandler.cpp` 进偏离面的理由，本轮不做。
 
-### 26. 门面文件：`RELEASES.md`（新）与 `readme.md` 顶部 banner
+### 26. 门面文件：`readme.md`（整篇换成改版 README）与 `HISTORY.md`（新）
 
-- `RELEASES.md`＝**用户视角**的版本历史（版本号规则、每版做了什么、已知问题、下载与许可）。它和 `CHANGES.md` 不重复：后者是逐文件的偏离账（给维护者/升级用），前者是给下载者看的。
-- `readme.md` 顶部加了 fork banner（连同 24 的 `src/UpdateCheck.cpp`，**上游文件 13 → 15**，`diff-vs-baseline.py` 与对 `.3rd` 的 `diff -rq` 两个来源同读数）。理由：Gitee/GitHub 仓库首页渲染的就是 `readme.md`，不改它，访客进来读到的是官方版介绍与官方下载链接。原内容（徽章、官方介绍、官方链接）整体保留在 banner 之下。
+按用户给的参考项目（`.ex/pecia` 的 `README.md` / `HISTORY.md`）的格式重写，并明确要求
+**不要**构建与技术栈那类内容，只讲：我们做了什么、仓库与下载地址、许可。
+
+- `readme.md`：**原本是上游官方 README，现整篇替换为改版说明**（标题 → 下载/仓库链接行 →
+  两件事的介绍 → 版本 → 许可 → 「关于官方原版」一节）。第一次尝试是在上游原文顶部加 banner，
+  但那样访客首页仍以官方版为主，且用户点名要按 pecia 格式自成一篇。官方的官网/手册链接与
+  作者归属（Krzysztof Kowalczyk 及贡献者、`AUTHORS`）保留在「关于官方原版」一节里，
+  并明确「问题反馈请发到本仓库」——上一轮审计说的"官方 discussions 链接会把我们改版的 bug
+  报到上游"，在门面这一层一并解决。
+  **保留小写文件名 `readme.md`**：Windows 文件系统不分大小写，`README.md` 与它就是同一个文件，
+  新增一个只会造出一个自己和自己冲突的仓库。`.gitattributes` 是 `* -text`（不做行尾归一），
+  所以两份 md 都按仓库既有约定写成 CRLF、无 BOM，实测计数为 CRLF 60 / 68、bare-LF 0。
+- `HISTORY.md`＝**用户视角**的版本历史，采用 pecia 的格式：开头一段「增量原则」（只在顶部追加、
+  旧条目不改不删），每节 `## <版本号>（日期）` 下分 **新增 / 变更 / 已知问题**。
+  3.6.1Q1 那节把本轮审计出的三条用户会撞到的缺陷（多窗口选项页崩溃、同名替换显示旧内容、
+  中断留下半截缓存）连同临时绕法一起写进去了——发布说明不该只报喜。
+  它取代了上一轮的 `RELEASES.md`（同一轮里刚建的文件，直接改名即可，不需要留兼容层）。
+- 与 `CHANGES.md` 的分工不变：`CHANGES.md`＝逐文件偏离账（升级时用），`HISTORY.md`＝版本历史（给人看的）。
+- **许可不新增文件**：本改版整体仍是 GPLv3，仓库里 `COPYING`（GPLv3 全文）、`COPYING.BSD`、
+  `AUTHORS`、`mupdf/COPYING`（AGPLv3）都是现成的，再加一份 `LICENSE` 只是同一个事实的第二个真源。
+  README 的许可一节直接链接 `COPYING` 并列出 MuPDF/caj2pdf-core 的许可。
 
 ### 27. 三处版本号必须有机器判等：`.plan/tools/check-release-version.py`
 
 `src/Version.h` 的 `VER_QUALIFIER`、`RELEASES.md` 最新条目标题、`readme.md` 首行——三处写的是同一个数，以前只靠注释互指。新门禁逐处读出并判等，另断言 `RELEASES.md` 的「版本对应关系」表里有这一行，以及记号形状合法（24/23 那条粘贴约束）。本轮实跑读数：`Version.h : 基线 3.6.1 + 修订 Q1 => 3.6.1Q1`，三处一致。
+（落点从 `RELEASES.md` 改成 `HISTORY.md` 之后重跑过红证：临时把修订写成 `Q9`，三格全红；还原后 md5 与快照一致。）
 
 顺带修了账具自己的一个洞：`diff-vs-baseline.py` 原先把「我们新增的文件」等同于「git 未跟踪」，**提交之后那些文件就不再未跟踪了**，于是新文件清单塌成 1 个、上游改动虚报成 23 个（15 改 + 8 新被混在一起）。现改成按 git 的状态字母分流（`A`＝新增、`M/D`＝改了上游），并把「上次提交之后新建、还没跟踪」的文件从 `git status` 并进来——只靠提交顺序才全的清单，就是一张会静默漏东西的清单。
 
