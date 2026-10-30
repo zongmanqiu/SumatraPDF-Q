@@ -64,7 +64,7 @@
 
 
 
-## 我们新增的文件（11 个，全部不碰官方同名文件）
+## 我们新增的文件（12 个，全部不碰官方同名文件）
 
 
 
@@ -83,6 +83,8 @@
 | `CHANGES.md` / `HISTORY.md` / `readme` 之外的本文 | 偏离账、版本历史、修改说明 |
 
 | `tools/` | `baseline-tree.txt` 基线 tree 快照 + 7 枚核对门禁（脚本自定位仓库根，不含本机路径）；三份文档在仓库根目录 | 门禁 |
+
+| `LICENSE` | GPLv3 全文，与 `upstream/COPYING` 逐字一致（m14b 起由 `tools/diff-vs-baseline.py` 查等；`.build/` 发行夹随 exe 附同一份 + README.md） | 许可 |
 
 
 

@@ -682,3 +682,18 @@ sp->textCol = ThemeDocumentColors(sp->bgCol);   // FixedPageUI 的 BackgroundCol
 **验证**：msbuild EXITCODE=0（逻辑路径没变 ⇒ 增量全绿，exe 未重链）；三枚静态门禁全绿
 （17 项偏离账、3.6.1Q2 三格判等、9 项描述符）；m08 端到端 ALL PASS（exe 从 `.temp/upstream-out/rel64` 起跑）；
 `.build/SumatraPDF-Q.exe` md5 与挪动前一致（本轮无产品改动）。
+
+### 46. 根目录与发行夹补 LICENSE；`.git` 体检；`.build` 清掉测试残留
+
+用户三条：① `.git` 几十 MB 要不要删；② 根目录没许可证；③ `.build/` 发行文件也没许可证。
+
+- **`.git` 不删**：它是仓库历史本身（偏离账、基线 tree 钉子、重命名追踪全在里面），
+  push/发行 zip 里都不会包含它。93 MB 全是未打包散对象，`git gc` 后 **70 MB**（内容大 = mupdf
+  字体与 packages 二进制的完整历史副本，属正常）。
+- **根目录 `LICENSE`**：m06 时定的「不另加 LICENSE（避免第二个真源）」前提已失效——当时我们的
+  文档与上游文件同层，COPYING 就在眼前；现在上游树进了 `upstream/`，根目录确实一个许可文件都没有，
+  用户点名要补。落法：`LICENSE`＝`upstream/COPYING`（GPLv3 全文）**逐字副本**，并加门禁
+  （`tools/diff-vs-baseline.py` 3b 节）：两处内容不一致即 FAIL——第二个真源由此不会漂移。
+  README 许可一节同步改写（旧的「不另加」说法删掉）。
+- **`.build/` 发行夹**＝`SumatraPDF-Q.exe` + `LICENSE` + `README.md` 三件。清掉了测试期留下的
+  运行时残留（`SumatraPDF-settings.txt`、`caj-cache/`、`sumatrapdfcache/`，均可再生）。

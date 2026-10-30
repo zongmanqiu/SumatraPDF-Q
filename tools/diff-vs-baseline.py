@@ -85,6 +85,19 @@ if os.path.isdir(BASELINE):
     for p in missing:
         print("  missing:", p)
 
+# 3b. root LICENSE must be a verbatim copy of upstream COPYING (m14b): the same
+#     licence fact now lives in two places, so a gate has to keep them identical.
+lic = os.path.join(MAIN, "LICENSE")
+if not os.path.isfile(lic):
+    print("FAIL: 根目录缺 LICENSE")
+    sys.exit(1)
+lic_b = open(lic, "rb").read()
+cpy_b = open(os.path.join(BASELINE, "COPYING"), "rb").read()
+if lic_b != cpy_b:
+    print("FAIL: LICENSE 与 upstream/COPYING 内容不一致")
+    sys.exit(1)
+print("OK: LICENSE = upstream/COPYING（逐字一致）")
+
 print(f"\n=== 改动的上游文件：{len(changed)} ===")
 for p in sorted(changed):
     print("  ", p)
